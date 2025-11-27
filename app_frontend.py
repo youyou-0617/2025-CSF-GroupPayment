@@ -2,7 +2,8 @@ import streamlit as st
 import requests
 import random
 
-API = "http://127.0.0.1:8000"
+# 使用本地地址，与服务器保持一致
+API = "http://localhost:8001"
 
 st.set_page_config(page_title="AA 群组记账", page_icon="💰", layout="centered")
 st.title("💰 AA 群组记账 App")

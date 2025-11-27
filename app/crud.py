@@ -1,19 +1,73 @@
 # 数据库增删改查与核心业务逻辑（分摊、结算）
 
 from sqlmodel import Session, select
-from .models import User, Group, Transaction, TransactionParticipant, GroupMember
+from .models import User, Group, Transaction, TransactionParticipant, GroupMember, Code
 from .schemas import CreateTransaction
 from typing import List, Optional
 import random
+import string
+import bcrypt
+from datetime import datetime, timedelta
 from app import models
 
-def create_user(session: Session, name: str, public_info: str = None):
+def hash_password(password: str) -> str:
+    """使用bcrypt安全哈希密码
+    
+    Args:
+        password: 原始密码
+    
+    Returns:
+        str: 哈希后的密码（包含盐值）
+    """
+    # 生成随机盐值并使用bcrypt算法哈希密码
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """验证密码
+    
+    Args:
+        plain_password: 原始密码
+        hashed_password: 哈希后的密码
+    
+    Returns:
+        bool: 密码是否匹配
+    """
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
+
+
+def create_user(session: Session, name: str, public_info: str = None, password: str = None):
     """创建新用户"""
-    user = models.User(name=name, public_info=public_info)
+    hashed_password = None
+    if password:
+        hashed_password = hash_password(password)
+    user = models.User(name=name, public_info=public_info, password=hashed_password)
     session.add(user)
     session.commit()
     session.refresh(user)
     return user
+
+
+def get_user_by_name_and_password(session: Session, name: str, password: str) -> Optional[models.User]:
+    """根据用户名和密码获取用户（用于登录验证）
+    
+    Args:
+        session: 数据库会话
+        name: 用户名
+        password: 密码
+    
+    Returns:
+        Optional[models.User]: 用户对象，如果不存在或密码错误返回None
+    """
+    stmt = select(models.User).where(models.User.name == name)
+    user = session.exec(stmt).first()
+    
+    if user and user.password and verify_password(password, user.password):
+        return user
+    
+    return None
 
 
 def get_user(session: Session, user_id: int):
@@ -86,8 +140,32 @@ def get_group(session: Session, group_id: int) -> Optional[Group]:
     return session.get(models.Group, group_id)
 
 def get_all_groups(session: Session):
-    """获取所有群组"""
-    return session.query(models.Group).all()
+    """获取所有群组及其成员信息"""
+    groups = session.query(models.Group).all()
+    result = []
+    
+    for group in groups:
+        # 获取群组成员信息
+        members = get_group_members(session, group.id)
+        # 构建包含成员信息的群组字典
+        group_dict = {
+            "id": group.id,
+            "name": group.name,
+            "members": [
+                {
+                    "id": member.id,
+                    "user_id": member.user_id,
+                    "group_id": member.group_id,
+                    "balance": member.balance,
+                    "joined_at": member.joined_at,
+                    "user": get_user(session, member.user_id)
+                }
+                for member in members
+            ]
+        }
+        result.append(group_dict)
+    
+    return result
 
 def delete_group(session: Session, group_id: int) -> bool:
     """删除群组
@@ -339,3 +417,298 @@ def compute_user_balance(session: Session, user_id: int) -> float:
     paid = sum(p.paid_amount for p in parts)
     share = sum(p.share_amount for p in parts)
     return round(paid - share, 2)
+
+# ------------------------
+# 兑换码相关函数
+# ------------------------
+
+def generate_code(length: int = 12) -> str:
+    """生成强随机兑换码
+    
+    Args:
+        length: 兑换码长度，默认为12位（增加安全性）
+    
+    Returns:
+        str: 生成的随机兑换码
+    """
+    # 使用大小写字母、数字和特殊字符生成更安全的随机码
+    characters = string.ascii_uppercase + string.ascii_lowercase + string.digits + "!@#$%^&*"
+    return ''.join(random.choice(characters) for _ in range(length))
+
+def hash_code(code: str, salt: str = None) -> tuple:
+    """对兑换码进行哈希处理
+    
+    Args:
+        code: 原始兑换码字符串
+        salt: 盐值，如果不提供则自动生成
+    
+    Returns:
+        tuple: (哈希后的兑换码, 使用的盐值)
+    """
+    if not salt:
+        salt = bcrypt.gensalt().decode('utf-8')
+    hashed = bcrypt.hashpw(code.encode('utf-8'), salt.encode('utf-8'))
+    return hashed.decode('utf-8'), salt
+
+def verify_code(code: str, hashed_code: str, salt: str) -> bool:
+    """验证兑换码是否正确
+    
+    Args:
+        code: 用户提供的原始兑换码
+        hashed_code: 存储的哈希值
+        salt: 存储的盐值
+    
+    Returns:
+        bool: 如果兑换码正确返回True，否则返回False
+    """
+    computed_hash, _ = hash_code(code, salt)
+    return computed_hash == hashed_code
+
+def create_code(session: Session, amount: float, created_by: int) -> dict:
+    """创建新的兑换码
+    
+    Args:
+        session: 数据库会话
+        amount: 兑换码对应的金额
+        created_by: 创建兑换码的用户ID
+    
+    Returns:
+        dict: 包含原始兑换码和创建结果的字典
+    """
+    # 生成唯一的兑换码
+    code_str = generate_code()
+    
+    # 对兑换码进行哈希处理
+    code_hash, code_salt = hash_code(code_str)
+    
+    # 获取兑换码前缀用于显示（前6位）
+    code_prefix = code_str[:6]
+    
+    # 检查相同前缀的兑换码是否已存在（降低冲突概率）
+    while session.exec(select(Code).where(Code.code_prefix == code_prefix)).first():
+        # 如果前缀已存在，重新生成兑换码
+        code_str = generate_code()
+        code_hash, code_salt = hash_code(code_str)
+        code_prefix = code_str[:6]
+    
+    # 创建兑换码
+    code = Code(
+        code_hash=code_hash,
+        code_salt=code_salt,
+        code_prefix=code_prefix,
+        amount=amount,
+        created_by=created_by,
+        expires_at=datetime.utcnow() + timedelta(days=30)  # 添加30天有效期
+    )
+    
+    session.add(code)
+    session.commit()
+    session.refresh(code)
+    
+    # 返回原始兑换码和兑换码对象信息
+    return {
+        "id": code.id,
+        "code": code_str,  # 返回原始兑换码（仅在创建时返回一次）
+        "code_prefix": code_prefix,
+        "amount": code.amount,
+        "is_used": code.is_used,
+        "created_by": code.created_by,
+        "created_at": code.created_at,
+        "expires_at": code.expires_at
+    }
+
+def get_code(session: Session, code_str: str) -> Optional[Code]:
+    """根据兑换码字符串获取兑换码信息
+    
+    Args:
+        session: 数据库会话
+        code_str: 用户提供的兑换码字符串
+    
+    Returns:
+        Optional[Code]: 兑换码对象，如果不存在返回None
+    """
+    # 由于我们不知道具体的盐值，需要先获取所有未使用的兑换码，然后逐一验证
+    # 为了提高效率，我们可以先通过前缀过滤
+    code_prefix = code_str[:6]
+    
+    # 获取具有相同前缀的未使用兑换码
+    stmt = select(Code).where(
+        Code.code_prefix == code_prefix,
+        Code.is_used == False
+    )
+    
+    potential_codes = session.exec(stmt).all()
+    
+    # 验证每个潜在的兑换码
+    for code in potential_codes:
+        if verify_code(code_str, code.code_hash, code.code_salt):
+            return code
+    
+    # 如果没有找到匹配的兑换码，再检查是否有已使用的（用于错误提示）
+    stmt = select(Code).where(Code.code_prefix == code_prefix)
+    all_potential_codes = session.exec(stmt).all()
+    
+    for code in all_potential_codes:
+        if verify_code(code_str, code.code_hash, code.code_salt):
+            return code
+    
+    return None
+
+def use_code(session: Session, code_str: str, user_id: int, group_id: int) -> dict:
+    """使用兑换码，增加用户在群组中的余额
+    
+    Args:
+        session: 数据库会话
+        code_str: 兑换码字符串
+        user_id: 使用兑换码的用户ID
+        group_id: 使用兑换码的群组ID
+    
+    Returns:
+        dict: 包含操作结果的字典
+    
+    Raises:
+        ValueError: 当兑换码不存在、已使用、已过期、用户不在群组中或其他错误时
+    """
+    # 获取兑换码
+    code = get_code(session, code_str)
+    if not code:
+        raise ValueError("兑换码不存在")
+    
+    # 检查兑换码是否已使用
+    if code.is_used:
+        raise ValueError("兑换码已被使用")
+    
+    # 检查兑换码是否已过期
+    if hasattr(code, 'expires_at') and code.expires_at and code.expires_at < datetime.utcnow():
+        raise ValueError("兑换码已过期")
+    
+    # 检查用户是否在群组中
+    stmt = select(GroupMember).where(
+        GroupMember.user_id == user_id,
+        GroupMember.group_id == group_id
+    )
+    member = session.exec(stmt).first()
+    if not member:
+        raise ValueError("用户不在该群组中")
+    
+    # 使用兑换码，更新用户余额
+    try:
+        # 获取群组信息
+        stmt = select(Group).where(Group.id == group_id)
+        group = session.exec(stmt).first()
+        group_name = group.name if group else "未知群组"
+        
+        # 更新兑换码状态
+        code.is_used = True
+        code.used_at = datetime.utcnow()
+        code.used_by = user_id
+        code.used_in_group = group_id
+        
+        # 更新用户在群组中的余额
+        member = update_group_member_balance(session, user_id, group_id, code.amount)
+        
+        session.commit()
+        
+        return {
+            "success": True,
+            "message": "兑换码使用成功",
+            "amount": code.amount,
+            "group_name": group_name,
+            "new_balance": member.balance
+        }
+    except Exception as e:
+        session.rollback()
+        raise ValueError(f"使用兑换码时出错: {str(e)}")
+
+def get_all_codes(session: Session) -> List[dict]:
+    """获取所有兑换码（管理员功能）
+    
+    Args:
+        session: 数据库会话
+    
+    Returns:
+        List[dict]: 所有兑换码的列表（不包含原始兑换码）
+    """
+    codes = session.exec(select(Code)).all()
+    
+    # 转换为字典列表，不包含敏感信息
+    result = []
+    for code in codes:
+        result.append({
+            "id": code.id,
+            "code_prefix": code.code_prefix,  # 只显示前缀，隐藏后半部分
+            "amount": code.amount,
+            "is_used": code.is_used,
+            "created_by": code.created_by,
+            "created_at": code.created_at,
+            "expires_at": code.expires_at,
+            "used_at": code.used_at,
+            "used_by": code.used_by,
+            "used_in_group": code.used_in_group
+        })
+    
+    return result
+
+def get_user_codes(session: Session, user_id: int) -> List[dict]:
+    """获取用户生成的所有兑换码
+    
+    Args:
+        session: 数据库会话
+        user_id: 用户ID
+    
+    Returns:
+        List[dict]: 用户生成的兑换码列表（不包含原始兑换码）
+    """
+    codes = session.exec(select(Code).where(Code.created_by == user_id)).all()
+    
+    # 转换为字典列表，不包含敏感信息
+    result = []
+    for code in codes:
+        result.append({
+            "id": code.id,
+            "code_prefix": code.code_prefix,  # 只显示前缀，隐藏后半部分
+            "amount": code.amount,
+            "is_used": code.is_used,
+            "created_by": code.created_by,
+            "created_at": code.created_at,
+            "expires_at": code.expires_at,
+            "used_at": code.used_at,
+            "used_by": code.used_by,
+            "used_in_group": code.used_in_group
+        })
+    
+    return result
+
+def get_used_codes(session: Session, used_by: int = None) -> List[dict]:
+    """获取已使用的兑换码
+    
+    Args:
+        session: 数据库会话
+        used_by: 可选，指定使用兑换码的用户ID
+    
+    Returns:
+        List[dict]: 已使用的兑换码列表（不包含原始兑换码）
+    """
+    query = select(Code).where(Code.is_used == True)
+    if used_by:
+        query = query.where(Code.used_by == used_by)
+    
+    codes = session.exec(query).all()
+    
+    # 转换为字典列表，不包含敏感信息
+    result = []
+    for code in codes:
+        result.append({
+            "id": code.id,
+            "code_prefix": code.code_prefix + "****",  # 只显示前缀，隐藏后半部分
+            "amount": code.amount,
+            "is_used": code.is_used,
+            "created_by": code.created_by,
+            "created_at": code.created_at,
+            "expires_at": code.expires_at,
+            "used_at": code.used_at,
+            "used_by": code.used_by,
+            "used_in_group": code.used_in_group
+        })
+    
+    return result

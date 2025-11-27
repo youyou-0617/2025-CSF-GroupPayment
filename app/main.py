@@ -2,7 +2,8 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlmodel import Session, select
 from .db import init_db, get_session
 from . import crud, schemas
-from app.models import User, Group, Transaction, TransactionParticipant, GroupMember
+from .schemas import CodeCreateOut
+from app.models import User, Group, Transaction, TransactionParticipant, GroupMember, Code
 
 app = FastAPI(title="Group Payment System")
 
@@ -18,13 +19,33 @@ def on_startup():
 # ------------------------
 @app.post("/users", response_model=schemas.UserOut)
 def create_user(u: schemas.CreateUser, session: Session = Depends(get_session)):
-    user = crud.create_user(session, u.name, u.public_info)
+    user = crud.create_user(session, u.name, u.public_info, u.password)
+    return user
+
+# 用户注册API
+@app.post("/users/register", response_model=schemas.UserOut)
+def register_user(u: schemas.RegisterUser, session: Session = Depends(get_session)):
+    """用户注册"""
+    # 检查用户名是否已存在
+    existing_user = crud.get_user_by_name(session, u.name)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="用户名已存在")
+    
+    user = crud.create_user(session, u.name, u.public_info, u.password)
     return user
 
 @app.get("/users", response_model=list[schemas.UserOut])
 def list_users(session: Session = Depends(get_session)):
     users = session.exec(select(User)).all()
     return users
+
+@app.get("/users/search", response_model=list[schemas.UserOut])
+def search_users(name: str, session: Session = Depends(get_session)):
+    """根据用户名搜索用户（精确匹配）"""
+    user = session.exec(select(User).where(User.name == name)).first()
+    if user:
+        return [user]  # 保持返回列表格式，确保前端兼容性
+    return []
 
 @app.get("/users/{user_id}", response_model=schemas.UserOut)
 def get_user(user_id: int, session: Session = Depends(get_session)):
@@ -43,11 +64,11 @@ def user_balance(user_id: int, session: Session = Depends(get_session)):
     return {"user_id": user_id, "user_name": user.name, "balance": balance}
 
 @app.post("/users/login")
-def user_login(user_name: str, session: Session = Depends(get_session)):
-    """用户登录（根据用户名）"""
-    user = crud.get_user_by_name(session, user_name)
+def user_login(u: schemas.LoginUser, session: Session = Depends(get_session)):
+    """用户登录（需要密码）"""
+    user = crud.get_user_by_name_and_password(session, u.name, u.password)
     if not user:
-        raise HTTPException(status_code=404, detail="用户不存在")
+        raise HTTPException(status_code=401, detail="用户名或密码错误")
     
     return {
         "id": user.id,
@@ -297,3 +318,114 @@ def get_transaction(tx_id: int, session: Session = Depends(get_session)):
 def list_participants(session: Session = Depends(get_session)):
     participants = session.exec(select(TransactionParticipant)).all()
     return participants
+
+# ------------------------
+# 数据库管理（仅管理员使用）
+# ------------------------
+@app.delete("/admin/reset")
+def reset_database(session: Session = Depends(get_session)):
+    """重置数据库（删除所有数据）
+    仅用于开发环境，谨慎使用！
+    """
+    try:
+        # 删除所有交易参与记录
+        session.query(TransactionParticipant).delete()
+        
+        # 删除所有交易记录
+        session.query(Transaction).delete()
+        
+        # 删除所有群组成员关系
+        session.query(GroupMember).delete()
+        
+        # 删除所有群组
+        session.query(Group).delete()
+        
+        # 删除所有用户
+        session.query(User).delete()
+        
+        # 删除所有兑换码
+        session.query(Code).delete()
+        
+        session.commit()
+        return {"message": "数据库重置成功，所有数据已删除"}
+    except Exception as e:
+        session.rollback()
+        raise HTTPException(status_code=500, detail=f"重置数据库失败: {str(e)}")
+
+# ------------------------
+# 兑换码相关API
+# ------------------------
+@app.post("/codes", response_model=schemas.CodeCreateOut)
+def create_code(code_data: schemas.CreateCode, session: Session = Depends(get_session)):
+    """生成新的兑换码（管理员功能）
+    
+    只有管理员可以生成兑换码，用户可以使用兑换码增加在群组中的余额。
+    """
+    # 这里简化处理，假设当前登录用户是管理员
+    # 在实际应用中，应该从认证系统获取当前用户信息
+    admin_user_id = 1  # 假设ID为1的用户是管理员
+    
+    try:
+        code = crud.create_code(session, code_data.amount, admin_user_id)
+        return code
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"生成兑换码失败: {str(e)}")
+
+@app.post("/codes/use")
+def use_code(code_data: schemas.UseCode, session: Session = Depends(get_session)):
+    """使用兑换码增加在群组中的余额
+    
+    用户可以在指定的群组中使用兑换码，增加自己在该群组中的余额。
+    """
+    # 从请求中获取用户ID，而不是硬编码
+    # 在实际应用中，应该从认证系统获取当前用户信息
+    current_user_id = code_data.user_id
+    if not current_user_id:
+        raise HTTPException(status_code=400, detail="用户ID不能为空")
+    
+    try:
+        result = crud.use_code(session, code_data.code, current_user_id, code_data.group_id)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"使用兑换码失败: {str(e)}")
+
+@app.get("/codes", response_model=list[schemas.CodeOut])
+def list_codes(session: Session = Depends(get_session)):
+    """获取所有兑换码（管理员功能）
+    
+    只有管理员可以查看所有兑换码的信息。
+    """
+    # 这里简化处理，假设当前登录用户是管理员
+    # 在实际应用中，应该从认证系统获取当前用户信息并验证管理员权限
+    
+    try:
+        codes = crud.get_all_codes(session)
+        return codes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取兑换码列表失败: {str(e)}")
+
+@app.get("/users/{user_id}/codes", response_model=list[schemas.CodeOut])
+def get_user_codes(user_id: int, session: Session = Depends(get_session)):
+    """获取用户生成的所有兑换码
+    
+    查看指定用户生成的所有兑换码信息。
+    """
+    try:
+        codes = crud.get_user_codes(session, user_id)
+        return codes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取用户兑换码失败: {str(e)}")
+
+@app.get("/codes/used", response_model=list[schemas.CodeOut])
+def list_used_codes(user_id: int = None, session: Session = Depends(get_session)):
+    """获取已使用的兑换码
+    
+    查看所有已使用的兑换码，可选指定使用用户ID。
+    """
+    try:
+        codes = crud.get_used_codes(session, user_id)
+        return codes
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取已使用兑换码失败: {str(e)}")
