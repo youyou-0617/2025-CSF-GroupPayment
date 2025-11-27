@@ -14,6 +14,7 @@ app = FastAPI(title="Group Payment System")
 def on_startup():
     init_db()
 
+
 # ------------------------
 # 用户 CRUD
 # ------------------------
