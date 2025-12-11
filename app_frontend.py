@@ -1,8 +1,22 @@
 import streamlit as st
 import requests
 import random
+import socket
 
-API = "http://127.0.0.1:8000"
+# 获取本地地址，确保与服务器保持一致
+def get_local_ip():
+    try:
+        # 创建一个临时的UDP连接来获取本机IP
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            # 连接到一个公共DNS服务器（不需要实际通信）
+            s.connect(('8.8.8.8', 80))
+            local_ip = s.getsockname()[0]
+        return local_ip
+    except Exception:
+        return "localhost"
+
+# 使用本地地址，与服务器保持一致
+API = f"http://{get_local_ip()}:8001"
 
 st.set_page_config(page_title="AA 群组记账", page_icon="💰", layout="centered")
 st.title("💰 AA 群组记账 App")

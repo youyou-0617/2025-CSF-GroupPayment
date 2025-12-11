@@ -7,6 +7,18 @@ from datetime import datetime
 class CreateUser(BaseModel):
     name: str
     public_info: Optional[str] = None
+    password: Optional[str] = None  # 添加密码字段
+
+# 用户注册模型
+class RegisterUser(BaseModel):
+    name: str
+    password: str  # 密码必填
+    public_info: Optional[str] = None
+
+# 用户登录模型
+class LoginUser(BaseModel):
+    name: str
+    password: str  # 密码必填
 
 
 # 群组创建模型
@@ -101,6 +113,43 @@ class TransactionOut(BaseModel):
     class Config:
         from_attributes = True  # Pydantic V2使用from_attributes替代orm_mode
 
+
+# 兑换码相关模型
+class CreateCode(BaseModel):
+    amount: float  # 兑换码对应的金额
+
+class UseCode(BaseModel):
+    code: str  # 要使用的兑换码
+    group_id: int  # 使用兑换码的群组ID
+    user_id: int  # 使用兑换码的用户ID
+
+class CodeCreateOut(BaseModel):
+    id: int
+    code: str  # 完整兑换码，仅在创建时返回一次
+    code_prefix: str  # 兑换码前缀
+    amount: float
+    is_used: bool
+    created_by: int
+    created_at: datetime
+    expires_at: datetime  # 兑换码有效期
+
+    class Config:
+        from_attributes = True  # Pydantic V2使用from_attributes替代orm_mode
+
+class CodeOut(BaseModel):
+    id: int
+    code_prefix: str  # 只显示兑换码前缀，隐藏后半部分
+    amount: float
+    is_used: bool
+    created_by: int
+    created_at: datetime
+    expires_at: datetime  # 兑换码有效期
+    used_at: Optional[datetime] = None
+    used_by: Optional[int] = None
+    used_in_group: Optional[int] = None
+
+    class Config:
+        from_attributes = True  # Pydantic V2使用from_attributes替代orm_mode
 
 # 解决循环引用
 GroupMemberOut.model_rebuild()
