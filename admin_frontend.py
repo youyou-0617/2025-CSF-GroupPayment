@@ -89,8 +89,9 @@ def admin_dashboard():
                         # 显示兑换码信息
                         col1, col2 = st.columns(2)
                         with col1:
-                            st.write(f"**兑换码:**")
-                            st.code(code_data['code_prefix'], language="")
+                            st.write(f"**完整兑换码:**")
+                            st.code(code_data['code'], language="")  # 显示完整兑换码而不是前缀
+                            st.write(f"**兑换码前缀:** {code_data['code_prefix']}")  # 额外显示前缀
                         with col2:
                             st.write(f"**金额:** ¥{code_data['amount']:.2f}")
                             st.write(f"**生成时间:** {code_data['created_at']}")
@@ -98,7 +99,8 @@ def admin_dashboard():
                             st.write(f"**有效期至:** {code_data.get('expires_at', '永久有效')}")
                         
                         # 添加复制按钮（Streamlit原生支持）
-                        st.write("点击上方代码块可复制兑换码")
+                        st.info("💡 提示：点击上方完整兑换码的代码块可一键复制")
+                        st.warning("⚠️ 重要：请妥善保管兑换码，只在创建时显示一次！")
                     else:
                         st.error(f"❌ 生成失败: {response.json().get('detail', '生成兑换码失败')}")
                 except Exception as e:
@@ -389,55 +391,134 @@ def admin_dashboard():
     tab1, tab2 = st.tabs(["所有兑换码", "我生成的兑换码"])
     
     with tab1:
-        if st.button("🔄 查看所有兑换码"):
-            try:
-                response = requests.get(f"{API}/codes")
-                if response.status_code == 200:
-                    codes = response.json()
-                    
-                    if codes:
-                        # 转换为DataFrame进行展示
-                        code_df = pd.DataFrame(codes)
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            if st.button("🔄 查看所有兑换码"):
+                try:
+                    response = requests.get(f"{API}/codes")
+                    if response.status_code == 200:
+                        codes = response.json()
                         
-                        # 格式化时间
-                        if 'created_at' in code_df.columns:
-                            code_df['created_at'] = pd.to_datetime(code_df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
-                        if 'used_at' in code_df.columns:
-                            code_df['used_at'] = pd.to_datetime(code_df['used_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
-                    
-                        # 添加状态显示
-                        code_df['status'] = code_df['is_used'].apply(lambda x: '✅ 已使用' if x else '🔴 未使用')
-                    
-                        # 选择要显示的列
-                        display_columns = [
-                            'code_prefix', 'amount', 'status', 'created_by', 
-                            'used_by', 'used_in_group', 'created_at', 'used_at'
-                        ]
-                    
-                        # 确保所有列都存在
-                        display_columns = [col for col in display_columns if col in code_df.columns]
-                    
-                        # 显示兑换码表格
-                        st.dataframe(code_df[display_columns], use_container_width=True)
+                        if codes:
+                            # 转换为DataFrame进行展示
+                            code_df = pd.DataFrame(codes)
+                            
+                            # 格式化时间
+                            if 'created_at' in code_df.columns:
+                                code_df['created_at'] = pd.to_datetime(code_df['created_at']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                            if 'used_at' in code_df.columns:
+                                code_df['used_at'] = pd.to_datetime(code_df['used_at'], errors='coerce').dt.strftime('%Y-%m-%d %H:%M:%S')
                         
-                        # 显示统计信息
-                        total_codes = len(code_df)
-                        used_codes = code_df['is_used'].sum()
-                        unused_codes = total_codes - used_codes
+                            # 添加状态显示
+                            code_df['status'] = code_df['is_used'].apply(lambda x: '✅ 已使用' if x else '🔴 未使用')
                         
-                        col1, col2, col3 = st.columns(3)
-                        with col1:
-                            st.metric("总兑换码数", total_codes)
-                        with col2:
-                            st.metric("已使用", used_codes)
-                        with col3:
-                            st.metric("未使用", unused_codes)
+                            # 选择要显示的列
+                            display_columns = [
+                                'code_prefix', 'amount', 'status', 'created_by', 
+                                'used_by', 'used_in_group', 'created_at', 'used_at'
+                            ]
+                        
+                            # 确保所有列都存在
+                            display_columns = [col for col in display_columns if col in code_df.columns]
+                        
+                            # 显示兑换码表格
+                            st.dataframe(code_df[display_columns], use_container_width=True)
+                            
+                            # 显示统计信息
+                            total_codes = len(code_df)
+                            used_codes = code_df['is_used'].sum()
+                            unused_codes = total_codes - used_codes
+                            
+                            col1, col2, col3 = st.columns(3)
+                            with col1:
+                                st.metric("总兑换码数", total_codes)
+                            with col2:
+                                st.metric("已使用", used_codes)
+                            with col3:
+                                st.metric("未使用", unused_codes)
+                            
+                            # 导出未使用兑换码功能
+                            st.write("---")
+                            st.subheader("💾 导出未使用兑换码")
+                            
+                            # 过滤未使用的兑换码
+                            unused_code_df = code_df[code_df['is_used'] == False]
+                            
+                            if len(unused_code_df) > 0:
+                                # 准备导出数据
+                                export_data = unused_code_df[['code_prefix', 'amount', 'created_at']]
+                                export_data.columns = ['兑换码', '金额', '生成时间']
+                                
+                                # 将DataFrame转换为CSV
+                                csv = export_data.to_csv(index=False, encoding='utf-8-sig')
+                                
+                                # 添加下载按钮
+                                st.download_button(
+                                    label="📥 导出未使用兑换码",
+                                    data=csv,
+                                    file_name="unused_codes.csv",
+                                    mime="text/csv",
+                                    help="导出所有未使用的兑换码及其对应金额"
+                                )
+                                
+                                st.success(f"发现 {len(unused_code_df)} 个未使用的兑换码，可以导出。")
+                            else:
+                                st.info("暂无未使用的兑换码可供导出。")
+                        else:
+                            st.info("暂无兑换码")
                     else:
-                        st.info("暂无兑换码")
-                else:
-                    st.error(f"获取兑换码失败: {response.text}")
-            except Exception as e:
-                st.error(f"获取出错: {str(e)}")
+                        st.error(f"获取兑换码失败: {response.text}")
+                except Exception as e:
+                    st.error(f"获取出错: {str(e)}")
+        
+        with col2:
+            st.subheader("💾 快速导出")
+            if st.button("📥 一键导出未使用兑换码"):
+                try:
+                    response = requests.get(f"{API}/codes")
+                    if response.status_code == 200:
+                        codes = response.json()
+                        
+                        if codes:
+                            # 转换为DataFrame
+                            code_df = pd.DataFrame(codes)
+                            
+                            # 过滤未使用的兑换码
+                            unused_code_df = code_df[code_df['is_used'] == False]
+                            
+                            if len(unused_code_df) > 0:
+                                # 准备导出数据
+                                export_data = unused_code_df[['code_prefix', 'amount', 'created_at']]
+                                export_data.columns = ['兑换码', '金额', '生成时间']
+                                
+                                # 格式化时间
+                                if '生成时间' in export_data.columns:
+                                    export_data['生成时间'] = pd.to_datetime(export_data['生成时间']).dt.strftime('%Y-%m-%d %H:%M:%S')
+                                
+                                # 将DataFrame转换为CSV
+                                csv = export_data.to_csv(index=False, encoding='utf-8-sig')
+                                
+                                # 添加下载按钮
+                                st.download_button(
+                                    label="📥 下载CSV文件",
+                                    data=csv,
+                                    file_name="unused_codes.csv",
+                                    mime="text/csv",
+                                    help="导出所有未使用的兑换码及其对应金额"
+                                )
+                                
+                                st.success(f"成功导出 {len(unused_code_df)} 个未使用的兑换码！")
+                            else:
+                                st.info("暂无未使用的兑换码可供导出。")
+                        else:
+                            st.info("暂无兑换码")
+                    else:
+                        st.error(f"获取兑换码失败: {response.text}")
+                except Exception as e:
+                    st.error(f"导出出错: {str(e)}")
+            
+            # 显示导出说明
+            st.info("💡 点击按钮可以快速导出所有未使用的兑换码及其对应金额，方便进行管理和分发。")
     
     with tab2:
         if st.button("🔄 查看我生成的兑换码"):

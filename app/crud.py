@@ -446,8 +446,13 @@ def hash_code(code: str, salt: str = None) -> tuple:
         tuple: (哈希后的兑换码, 使用的盐值)
     """
     if not salt:
-        salt = bcrypt.gensalt().decode('utf-8')
-    hashed = bcrypt.hashpw(code.encode('utf-8'), salt.encode('utf-8'))
+        # 直接使用bcrypt.gensalt()生成盐值，然后解码存储
+        bcrypt_salt = bcrypt.gensalt()
+        salt = bcrypt_salt.decode('utf-8')
+        hashed = bcrypt.hashpw(code.encode('utf-8'), bcrypt_salt)
+    else:
+        # 如果提供了盐值，使用它来计算哈希
+        hashed = bcrypt.hashpw(code.encode('utf-8'), salt.encode('utf-8'))
     return hashed.decode('utf-8'), salt
 
 def verify_code(code: str, hashed_code: str, salt: str) -> bool:
@@ -456,13 +461,14 @@ def verify_code(code: str, hashed_code: str, salt: str) -> bool:
     Args:
         code: 用户提供的原始兑换码
         hashed_code: 存储的哈希值
-        salt: 存储的盐值
+        salt: 存储的盐值（这里仍然保留参数以保持API兼容性，但在函数内部不使用）
     
     Returns:
         bool: 如果兑换码正确返回True，否则返回False
     """
-    computed_hash, _ = hash_code(code, salt)
-    return computed_hash == hashed_code
+    # 直接使用bcrypt.checkpw进行验证，这是bcrypt的正确验证方式
+    # bcrypt的哈希值本身就包含了盐值信息
+    return bcrypt.checkpw(code.encode('utf-8'), hashed_code.encode('utf-8'))
 
 def create_code(session: Session, amount: float, created_by: int) -> dict:
     """创建新的兑换码

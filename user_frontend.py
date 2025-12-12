@@ -242,6 +242,68 @@ else:
             except Exception as e:
                 st.error(f"搜索出错: {str(e)}")
     
+    # 随机列出用户功能（测试功能）
+    st.write("---")
+    st.subheader("🎲 随机用户（测试功能）")
+    
+    if st.button("🎲 随机列出10个用户"):
+        try:
+            # 获取所有用户
+            response = requests.get(f"{API}/users")
+            if response.status_code == 200:
+                all_users = response.json()
+                if all_users:
+                    import random
+                    # 随机选择最多10个用户
+                    random_users = random.sample(all_users, min(10, len(all_users)))
+                    
+                    st.success(f"✅ 随机获取了 {len(random_users)} 个用户")
+                    
+                    # 创建DataFrame展示随机用户信息
+                    user_data = []
+                    for u in random_users:
+                        user_data.append([
+                            u['id'],
+                            u['name'],
+                            u.get('public_info', '无')
+                        ])
+                    
+                    df = pd.DataFrame(user_data, columns=["用户ID", "用户名", "公开信息"])
+                    st.dataframe(df, use_container_width=True)
+                    
+                    # 提供批量添加功能
+                    st.write("\n**批量操作**")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("➕ 添加所有到选择列表"):
+                            if 'selected_user_ids' not in st.session_state:
+                                st.session_state.selected_user_ids = []
+                            added_count = 0
+                            for u in random_users:
+                                if u['id'] not in st.session_state.selected_user_ids:
+                                    st.session_state.selected_user_ids.append(u['id'])
+                                    added_count += 1
+                            st.success(f"已添加 {added_count} 个用户到选择列表")
+                    with col2:
+                        if st.button("🔍 查看完整用户列表"):
+                            # 查看所有用户的详细信息
+                            full_user_data = []
+                            for u in all_users:
+                                full_user_data.append([
+                                    u['id'],
+                                    u['name'],
+                                    u.get('public_info', '无')
+                                ])
+                            full_df = pd.DataFrame(full_user_data, columns=["用户ID", "用户名", "公开信息"])
+                            st.dataframe(full_df, use_container_width=True)
+                            st.info(f"数据库中共有 {len(all_users)} 个用户")
+                else:
+                    st.info("数据库中暂无用户")
+            else:
+                st.error(f"获取用户列表失败: {response.text}")
+        except Exception as e:
+            st.error(f"获取用户出错: {str(e)}")
+    
     # 显示当前选择的用户列表
     if 'selected_user_ids' in st.session_state and st.session_state.selected_user_ids:
         st.write("---")
