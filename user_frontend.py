@@ -18,6 +18,63 @@ def get_local_ip():
 # 使用本地地址，与服务器保持一致
 API = f"http://{get_local_ip()}:8001"
 
+# 添加自定义CSS样式
+st.markdown("""
+<style>
+/* 覆盖Streamlit所有可能的选中单元格样式 - 最高优先级 */
+.stDataFrame td,
+.stDataFrame tr,
+.stDataFrame table {
+    --dataframe__cell--selected-background-color: rgba(0, 123, 255, 0.3) !important;
+    --dataframe__cell--selected-border-color: rgba(0, 123, 255, 0.7) !important;
+}
+
+/* 直接覆盖单元格的所有选中、聚焦、激活状态 */
+.stDataFrame td:focus,
+.stDataFrame td:active,
+.stDataFrame td[data-selected="true"],
+.stDataFrame td:focus-within {
+    background-color: rgba(0, 123, 255, 0.3) !important;
+    border: 2px solid rgba(0, 123, 255, 0.7) !important;
+    box-shadow: none !important;
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* 处理悬停状态 */
+.stDataFrame td:hover {
+    background-color: rgba(0, 123, 255, 0.2) !important;
+    border-color: rgba(0, 123, 255, 0.5) !important;
+}
+
+/* 确保表头样式不受影响 */
+.stDataFrame th {
+    background-color: #f0f2f6 !important;
+}
+
+/* 覆盖Streamlit内部样式 - 确保选中状态是蓝色 */
+[data-testid="stDataFrame"] td:focus,
+[data-testid="stDataFrame"] td:active,
+[data-testid="stDataFrame"] td[data-selected="true"] {
+    background-color: rgba(0, 123, 255, 0.3) !important;
+    border: 2px solid rgba(0, 123, 255, 0.7) !important;
+}
+
+/* 增强悬停效果 */
+[data-testid="stDataFrame"] td:hover {
+    background-color: rgba(0, 123, 255, 0.2) !important;
+    border-color: rgba(0, 123, 255, 0.5) !important;
+}
+
+/* 重置任何可能的默认选中样式 */
+* {
+    --primary-color: #007bff !important;
+    --secondary-color: #007bff !important;
+    --accent-color: #007bff !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
 st.set_page_config(page_title="用户端 - AA 群组记账", page_icon="👤", layout="centered", initial_sidebar_state="expanded" )
 
 # 初始化会话状态
@@ -129,7 +186,7 @@ else:
     
     # ==================== 页面化设计开始 ====================
     # 使用标签页实现页面化导航
-    tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["🏠 首页", "🔍 搜索用户", "➕ 创建群组", "👥 群组详情", "🎫 使用兑换码", "📝 交易记录"])
+    tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["🏠 首页", "🔍 搜索用户", "➕ 创建群组", "👥 群组详情", "🎫 使用兑换码", "📝 交易记录", "🎲 随机用户"])
     
     # ------------------------
     # 首页（第一个标签页）- 个人信息和群组余额
@@ -166,7 +223,8 @@ else:
                         total_members = 0
                         if group_detail_response.status_code == 200:
                             group_detail = group_detail_response.json()
-                            total_members = group_detail.get('total_members', 0)
+                            # 优先使用members列表的长度，如果没有则使用total_members字段
+                            total_members = len(group_detail.get('members', [])) if 'members' in group_detail else group_detail.get('total_members', 0)
                     except Exception as e:
                         st.error(f"获取群组 {g['group_name']} 详情出错: {str(e)}")
                         total_members = "获取失败"
@@ -183,7 +241,7 @@ else:
                         total_members
                     ])
                 
-                df = pd.DataFrame(group_data, columns=["群组ID", "群组名称", "我的余额", "总成员数"])
+                df = pd.DataFrame(group_data, columns=["群组ID", "群组名称", "我的余额", "总成员数"], index=range(1, len(group_data)+1))
                 st.dataframe(df, use_container_width=True)
                 
                 # 计算总余额
@@ -259,69 +317,7 @@ else:
                     except Exception as e:
                         st.error(f"搜索出错: {str(e)}")
             
-        # 添加分界线
-        st.divider()
-        
-        st.subheader("🎲 随机用户（测试功能）")
-        # 随机用户容器
-        with st.container(border=True):
-            if st.button("🎲 随机列出10个用户"):
-                try:
-                    # 获取所有用户
-                    response = requests.get(f"{API}/users")
-                    if response.status_code == 200:
-                        all_users = response.json()
-                        if all_users:
-                            import random
-                            # 随机选择最多10个用户
-                            random_users = random.sample(all_users, min(10, len(all_users)))
-                            
-                            st.success(f"✅ 随机获取了 {len(random_users)} 个用户")
-                            
-                            # 创建DataFrame展示随机用户信息
-                            user_data = []
-                            for u in random_users:
-                                user_data.append([
-                                    u['id'],
-                                    u['name'],
-                                    u.get('public_info', '无')
-                                ])
-                            
-                            df = pd.DataFrame(user_data, columns=["用户ID", "用户名", "公开信息"])
-                            st.dataframe(df, use_container_width=True)
-                            
-                            # 提供批量添加功能
-                            st.write("\n**批量操作**")
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                if st.button("➕ 添加所有到选择列表"):
-                                    if 'selected_user_ids' not in st.session_state:
-                                        st.session_state.selected_user_ids = []
-                                    added_count = 0
-                                    for u in random_users:
-                                        if u['id'] not in st.session_state.selected_user_ids:
-                                            st.session_state.selected_user_ids.append(u['id'])
-                                            added_count += 1
-                                    st.success(f"已添加 {added_count} 个用户到选择列表")
-                            with col2:
-                                if st.button("🔍 查看完整用户列表"):
-                                    # 查看所有用户的详细信息
-                                    full_user_data = []
-                                    for u in all_users:
-                                        full_user_data.append([
-                                            u['id'],
-                                            u['name'],
-                                            u.get('public_info', '无')
-                                        ])
-                                    full_df = pd.DataFrame(full_user_data, columns=["用户ID", "用户名", "公开信息"])
-                                    st.dataframe(full_df, use_container_width=True)
-                                    st.info(f"数据库中共有 {len(all_users)} 个用户")
-                        else:
-                            st.info("数据库中暂无用户")
-                    else:
-                        st.error(f"获取用户列表失败: {response.text}")
-                except Exception as e:
-                    st.error(f"获取用户出错: {str(e)}")
+
         
         # 显示当前选择的用户列表
         if 'selected_user_ids' in st.session_state and st.session_state.selected_user_ids:
@@ -512,7 +508,7 @@ else:
                         if response.status_code == 200:
                             group = response.json()
                             st.write(f"**群组名称**: {group['name']}")
-                            st.write(f"**总成员数**: {group.get('total_members', 0)}")
+                            st.write(f"**总成员数**: {len(group.get('members', [])) if 'members' in group else group.get('total_members', 0)}")
                             
                             st.write("\n**群组成员及余额**")
                             if 'members' in group and group['members']:
@@ -534,7 +530,7 @@ else:
                                         f"{balance_color} {balance_str}"
                                     ])
                                 
-                                member_df = pd.DataFrame(member_data, columns=["用户ID", "用户名", "余额"])
+                                member_df = pd.DataFrame(member_data, columns=["用户ID", "用户名", "余额"], index=range(1, len(member_data)+1))
                                 st.dataframe(member_df, use_container_width=True)
                             else:
                                 st.write("该群组暂无成员")
@@ -663,4 +659,71 @@ else:
                 st.error("获取交易记录失败")
         except Exception as e:
             st.error(f"获取交易记录时出错: {e}")
+    
+    # ------------------------
+    # 随机用户（第七个标签页）- 随机获取用户功能
+    # ------------------------
+    with tab7:
+        st.header("🎲 随机用户")
+        st.write("测试功能：随机获取系统中的用户")
+        
+        # 随机用户容器
+        with st.container(border=True):
+            if st.button("🎲 随机列出10个用户"):
+                try:
+                    # 获取所有用户
+                    response = requests.get(f"{API}/users")
+                    if response.status_code == 200:
+                        all_users = response.json()
+                        if all_users:
+                            import random
+                            # 随机选择最多10个用户
+                            random_users = random.sample(all_users, min(10, len(all_users)))
+                            
+                            st.success(f"✅ 随机获取了 {len(random_users)} 个用户")
+                            
+                            # 创建DataFrame展示随机用户信息
+                            user_data = []
+                            for u in random_users:
+                                user_data.append([
+                                    u['id'],
+                                    u['name'],
+                                    u.get('public_info', '无')
+                                ])
+                            
+                            df = pd.DataFrame(user_data, columns=["用户ID", "用户名", "公开信息"])
+                            st.dataframe(df, use_container_width=True)
+                            
+                            # 提供批量添加功能
+                            st.write("\n**批量操作**")
+                            col1, col2 = st.columns(2)
+                            with col1:
+                                if st.button("➕ 添加所有到选择列表"):
+                                    if 'selected_user_ids' not in st.session_state:
+                                        st.session_state.selected_user_ids = []
+                                    added_count = 0
+                                    for u in random_users:
+                                        if u['id'] not in st.session_state.selected_user_ids:
+                                            st.session_state.selected_user_ids.append(u['id'])
+                                            added_count += 1
+                                    st.success(f"已添加 {added_count} 个用户到选择列表")
+                            with col2:
+                                if st.button("🔍 查看完整用户列表"):
+                                    # 查看所有用户的详细信息
+                                    full_user_data = []
+                                    for u in all_users:
+                                        full_user_data.append([
+                                            u['id'],
+                                            u['name'],
+                                            u.get('public_info', '无')
+                                        ])
+                                    full_df = pd.DataFrame(full_user_data, columns=["用户ID", "用户名", "公开信息"])
+                                    st.dataframe(full_df, use_container_width=True)
+                                    st.info(f"数据库中共有 {len(all_users)} 个用户")
+                        else:
+                            st.info("数据库中暂无用户")
+                    else:
+                        st.error(f"获取用户列表失败: {response.text}")
+                except Exception as e:
+                    st.error(f"获取用户出错: {str(e)}")
     # ==================== 页面化设计结束 ====================
