@@ -2,145 +2,92 @@ import streamlit as st
 import requests
 import pandas as pd
 import socket
-import streamlit as st
-import requests
-import pandas as pd
-import socket
-import time  # 添加这行
+import time  # 用于可能的延时处理
 
-# 获取本地地址，确保与服务器保持一致
+# =======================
+# 必须最先调用 set_page_config
+# =======================
+st.set_page_config(
+    page_title="用户端 - AA 群组记账",
+    page_icon="👤",
+    layout="centered",
+    initial_sidebar_state="expanded"
+)
+
+# =======================
+# 获取本地 IP 地址
+# =======================
 def get_local_ip():
     try:
-        # 创建一个临时的UDP连接来获取本机IP
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            # 连接到一个公共DNS服务器（不需要实际通信）
             s.connect(('8.8.8.8', 80))
-            local_ip = s.getsockname()[0]
-        return local_ip
-    except Exception:
+            return s.getsockname()[0]
+    except:
         return "localhost"
 
-# 获取本地地址，确保与服务器保持一致
-def get_local_ip():
-    try:
-        # 创建一个临时的UDP连接来获取本机IP
-        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            # 连接到一个公共DNS服务器（不需要实际通信）
-            s.connect(('8.8.8.8', 80))
-            local_ip = s.getsockname()[0]
-        return local_ip
-    except Exception:
-        return "localhost"
-
-# 使用本地地址，与服务器保持一致
 API = f"http://{get_local_ip()}:8001"
 
-# 添加自定义CSS样式
+# =======================
+# 自定义 CSS 样式
+# =======================
 st.markdown("""
 <style>
-/* 覆盖Streamlit所有可能的选中单元格样式 - 最高优先级 */
-.stDataFrame td,
-.stDataFrame tr,
-.stDataFrame table {
-    --dataframe__cell--selected-background-color: rgba(0, 123, 255, 0.3) !important;
-    --dataframe__cell--selected-border-color: rgba(0, 123, 255, 0.7) !important;
-}
-
-/* 直接覆盖单元格的所有选中、聚焦、激活状态 */
+/* DataFrame 选中/聚焦/悬停样式 */
 .stDataFrame td:focus,
 .stDataFrame td:active,
-.stDataFrame td[data-selected="true"],
-.stDataFrame td:focus-within {
+.stDataFrame td[data-selected="true"] {
     background-color: rgba(0, 123, 255, 0.3) !important;
     border: 2px solid rgba(0, 123, 255, 0.7) !important;
-    box-shadow: none !important;
     outline: none !important;
-    -webkit-tap-highlight-color: transparent !important;
 }
-
-/* 处理悬停状态 */
 .stDataFrame td:hover {
     background-color: rgba(0, 123, 255, 0.2) !important;
-    border-color: rgba(0, 123, 255, 0.5) !important;
 }
-
-/* 确保表头样式不受影响 */
 .stDataFrame th {
     background-color: #f0f2f6 !important;
 }
 
-/* 覆盖Streamlit内部样式 - 确保选中状态是蓝色 */
-[data-testid="stDataFrame"] td:focus,
-[data-testid="stDataFrame"] td:active,
-[data-testid="stDataFrame"] td[data-selected="true"] {
-    background-color: rgba(0, 123, 255, 0.3) !important;
-    border: 2px solid rgba(0, 123, 255, 0.7) !important;
-}
-
-/* 增强悬停效果 */
-[data-testid="stDataFrame"] td:hover {
-    background-color: rgba(0, 123, 255, 0.2) !important;
-    border-color: rgba(0, 123, 255, 0.5) !important;
-}
-
-/* 重置任何可能的默认选中样式 */
-* {
-    --primary-color: #007bff !important;
-    --secondary-color: #007bff !important;
-    --accent-color: #007bff !important;
-}
-
-/* 模态弹窗样式 - 使用更高优先级的选择器 */
+/* 模态框样式 */
 div[data-modal="overlay"] {
     position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    width: 100% !important;
-    height: 100% !important;
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    z-index: 9999 !important;
+    top: 0 !important; left: 0 !important;
+    width: 100% !important; height: 100% !important;
+    background-color: rgba(0,0,0,0.5) !important; z-index: 9999 !important;
 }
-
-/* 模态框容器样式 - 使用更高优先级的选择器 */
 div[data-modal="content"] {
     position: fixed !important;
-    top: 50% !important;
-    left: 50% !important;
+    top: 50% !important; left: 50% !important;
     transform: translate(-50%, -50%) !important;
     background-color: white !important;
-    padding: 20px !important;
-    border-radius: 8px !important;
-    z-index: 10000 !important;
-    width: 80% !important;
-    max-width: 700px !important;
-    max-height: 80vh !important;
+    padding: 20px !important; border-radius: 8px !important;
+    z-index: 10000 !important; width: 80% !important;
+    max-width: 700px !important; max-height: 80vh !important;
     overflow-y: auto !important;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
 }
 </style>
 """, unsafe_allow_html=True)
 
-st.set_page_config(page_title="用户端 - AA 群组记账", page_icon="👤", layout="centered", initial_sidebar_state="expanded")
-
+# =======================
 # 初始化会话状态
+# =======================
 if 'user' not in st.session_state:
     st.session_state.user = None
 
-# 主应用
+# =======================
+# 登录/注册逻辑
+# =======================
 if st.session_state.user is None:
-    # 登录/注册页面切换
     tab1, tab2 = st.tabs(["登录", "注册"])
-    
+
+    # ---------- 登录 ----------
     with tab1:
-        # 登录页面
         st.title("👤 用户登录")
         st.write("请输入您的用户名和密码进行登录")
-        
         with st.form("login_form"):
             username = st.text_input("用户名")
             password = st.text_input("密码", type="password")
             submit = st.form_submit_button("登录")
-        
         if submit:
             if not username.strip():
                 st.error("请输入用户名")
@@ -148,34 +95,26 @@ if st.session_state.user is None:
                 st.error("请输入密码")
             else:
                 try:
-                    # 调用登录API
-                    response = requests.post(
-                        f"{API}/users/login",
-                        json={"name": username, "password": password}
-                    )
+                    response = requests.post(f"{API}/users/login", json={"name": username, "password": password})
                     if response.status_code == 200:
-                        user_data = response.json()
-                        st.session_state.user = user_data
+                        st.session_state.user = response.json()
                         st.success(f"登录成功！欢迎回来，{username}")
-                        # 刷新页面显示登录后的内容
                         st.rerun()
                     else:
-                        st.error(f"登录失败: {response.json().get('detail', '用户名或密码错误')}")
+                        st.error(f"登录失败: {response.json().get('detail','用户名或密码错误')}")
                 except Exception as e:
                     st.error(f"登录出错: {str(e)}")
-    
+
+    # ---------- 注册 ----------
     with tab2:
-        # 注册页面
         st.title("👤 用户注册")
         st.write("请输入您的用户名和密码进行注册")
-        
         with st.form("register_form"):
             username = st.text_input("用户名")
             password = st.text_input("密码", type="password")
             confirm_password = st.text_input("确认密码", type="password")
             public_info = st.text_area("公开信息（可选）")
             submit = st.form_submit_button("注册")
-        
         if submit:
             if not username.strip():
                 st.error("请输入用户名")
@@ -185,27 +124,23 @@ if st.session_state.user is None:
                 st.error("两次输入的密码不一致")
             else:
                 try:
-                    # 调用注册API
                     response = requests.post(
                         f"{API}/users/register",
-                        json={
-                            "name": username,
-                            "password": password,
-                            "public_info": public_info
-                        }
+                        json={"name": username, "password": password, "public_info": public_info}
                     )
                     if response.status_code == 200:
-                        user_data = response.json()
-                        st.session_state.user = user_data
+                        st.session_state.user = response.json()
                         st.success(f"注册成功！欢迎，{username}")
-                        # 刷新页面显示登录后的内容
                         st.rerun()
                     else:
-                        st.error(f"注册失败: {response.json().get('detail', '注册失败')}")
+                        st.error(f"注册失败: {response.json().get('detail','注册失败')}")
                 except Exception as e:
                     st.error(f"注册出错: {str(e)}")
+
+# =======================
+# 登录后的主页面
+# =======================
 else:
-    # 登录后的主页面
     user = st.session_state.user
     st.title(f"👤 欢迎回来，{user['name']}")
     
@@ -216,106 +151,51 @@ else:
             del st.session_state.user_groups
         st.rerun()
     
-    # 获取用户的群组信息并存储在会话状态中
+    # 获取用户群组信息
     if 'user_groups' not in st.session_state:
         try:
             response = requests.get(f"{API}/users/{user['id']}/groups")
             if response.status_code == 200:
-                data = response.json()
-                st.session_state.user_groups = data['groups']
+                st.session_state.user_groups = response.json().get('groups', [])
             else:
                 st.session_state.user_groups = []
-        except Exception as e:
+        except:
             st.session_state.user_groups = []
-            st.error(f"获取群组信息出错: {str(e)}")
-    
-    # ==================== 页面化设计开始 ====================
-    # 使用标签页实现页面化导航
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 首页", "👥 群组详情", "🎫 使用兑换码", "📝 交易记录", "🎲 随机用户"])
-    
-    # ------------------------
-    # 首页（第一个标签页）- 个人信息和群组余额
-    # ------------------------
-    with tab1:
-        # 个人信息区块
-        st.subheader("📋 个人信息")
 
-        with st.container(border=True):  # 添加边框效果
-            col1, col2 = st.columns(2)
-            with col1:
-                st.info(f"**用户名**: {user['name']}")
-            with col2:
-                st.info(f"**用户ID**: {user['id']}")
-            if user.get('public_info'):
-                st.success(f"**公开信息**: {user['public_info']}")
-        
-        st.divider()  # 添加水平分隔线
-        
+    # =======================
+    # 页面化导航
+    # =======================
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["🏠 首页", "👥 群组详情", "🎫 使用兑换码", "📝 交易记录", "🎲 随机用户"])
+
+    # ---------- 首页 ----------
+    with tab1:
+        st.subheader("📋 个人信息")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("👤 用户名", user['name'])
+        col2.metric("🆔 用户ID", user['id'])
+        col3.metric("ℹ️ 公开信息", user.get('public_info', '无'))
+
+        st.divider()
         st.subheader("📊 我的群组和余额")
-        # 群组和余额区块
-        with st.container(border=True):  # 添加边框效果
-            # 首先显示群组信息（从会话状态或API获取）
-            if st.session_state.user_groups:
-                # 显示用户的群组列表和余额
-                st.write(f"您好，{user['name']}，您加入了 {len(st.session_state.user_groups)} 个群组：")
-                
-                # 创建DataFrame展示群组信息
-                group_data = []
-                for g in st.session_state.user_groups:
-                    # 获取群组详情以显示总成员数
-                    try:
-                        group_detail_response = requests.get(f"{API}/groups/{g['group_id']}")
-                        total_members = 0
-                        if group_detail_response.status_code == 200:
-                            group_detail = group_detail_response.json()
-                            # 优先使用members列表的长度，如果没有则使用total_members字段
-                            total_members = len(group_detail.get('members', [])) if 'members' in group_detail else group_detail.get('total_members', 0)
-                    except Exception as e:
-                        st.error(f"获取群组 {g['group_name']} 详情出错: {str(e)}")
-                        total_members = "获取失败"
-                    
-                    # 格式化余额显示
-                    balance_str = f"{g['balance']:.2f}"
-                    # 根据余额正负添加颜色
-                    balance_color = "🟢" if g['balance'] >= 0 else "🔴"
-                    
-                    group_data.append([
-                        g['group_id'],
-                        g['group_name'],
-                        f"{balance_color} {balance_str}",
-                        total_members
-                    ])
-                
-                df = pd.DataFrame(group_data, columns=["群组ID", "群组名称", "我的余额", "总成员数"], index=range(1, len(group_data)+1))
-                st.dataframe(df, use_container_width=True)
-                
-                # 计算总余额
-                total_balance = sum(g['balance'] for g in st.session_state.user_groups)
-                st.metric("💰 所有群组总余额", f"{total_balance:.2f}")
-            else:
-                st.info("您还没有加入任何群组")
-            
-            # 添加刷新按钮到群组表单下方
-            refresh_clicked = st.button("🔄 刷新")
-            
-            # 处理刷新逻辑
-            if refresh_clicked:
-                try:
-                    response = requests.get(f"{API}/users/{user['id']}/groups")
-                    if response.status_code == 200:
-                        data = response.json()
-                        # 更新会话中的群组信息
-                        st.session_state.user_groups = data['groups']
-                        st.rerun()  # 重新运行应用以更新显示
-                    else:
-                        st.error(f"获取群组信息失败: {response.text}")
-                except Exception as e:
-                    st.error(f"获取群组信息出错: {str(e)}")
-    
-    # ==================== 关键修复：确保 tab2 区块正确闭合 ====================
-    # ------------------------
-    # 群组详情（第二个标签页）
-    # ------------------------
+        if st.session_state.user_groups:
+            for g in st.session_state.user_groups:
+                balance_color = "🟢" if g['balance'] >= 0 else "🔴"
+                st.info(f"{g['group_name']} ({g['group_id']}): {balance_color} {g['balance']:.2f}")
+            total_balance = sum(g['balance'] for g in st.session_state.user_groups)
+            st.success(f"💰 所有群组总余额: {total_balance:.2f}")
+        else:
+            st.info("您还没有加入任何群组")
+        
+        if st.button("🔄 刷新"):
+            try:
+                response = requests.get(f"{API}/users/{user['id']}/groups")
+                if response.status_code == 200:
+                    st.session_state.user_groups = response.json().get('groups', [])
+                    st.experimental_rerun()
+            except Exception as e:
+                st.error(f"刷新失败: {e}")
+
+    # ---------- 群组详情（第二个标签页） ----------
     # 在登录后的主页面部分，修改群组详情标签页中的侧边栏代码：
     with tab2:
         # 添加创建群组按钮
@@ -623,7 +503,7 @@ else:
         with st.container(border=True):
             # 从用户所在的群组中选择
             if st.session_state.user_groups:
-                group_options = [(g['group_name'], g['group_id']) for g in st.session_state.user_groups]
+                group_options = [(g.get('group_name', g.get('name', '未知群组')), g['group_id']) for g in st.session_state.user_groups]
                 selected_group = st.selectbox(
                     "选择群组查看详情",
                     options=group_options,
@@ -635,191 +515,130 @@ else:
                 if selected_group:
                     try:
                         response = requests.get(f"{API}/groups/{selected_group[1]}")
-                        if response.status_code == 200:
-                            group_detail = response.json()
-                            st.subheader(f"📊 {group_detail['group_name']} - 群组详情")
-                            
-                            # 显示群组信息
-                            col1, col2 = st.columns(2)
-                            with col1:
-                                st.info(f"**群组ID:** {group_detail['id']}")
-                            with col2:
-                                st.info(f"**创建时间:** {group_detail.get('created_at', '未知')}")
-                            
-                            # 显示成员列表
-                            st.subheader("👥 成员列表")
-                            members = group_detail.get('members', [])
-                            if members:
-                                member_data = []
-                                for member in members:
-                                    # 为每个成员获取余额
-                                    member_balance = 0
-                                    for g in st.session_state.user_groups:
-                                        if g['group_id'] == selected_group[1] and g['member_id'] == member['id']:
-                                            member_balance = g['balance']
-                                            break
-                                    
-                                    # 格式化余额显示
-                                    balance_str = f"{member_balance:.2f}"
-                                    balance_color = "🟢" if member_balance >= 0 else "🔴"
-                                    
-                                    member_data.append([
-                                        member['id'],
-                                        member['name'],
-                                        f"{balance_color} {balance_str}"
-                                    ])
+                        group_detail = response.json()
+                        
+                        # 获取群组名称
+                        group_name = group_detail.get('group_name') or group_detail.get('name', '未知群组')
+                        st.subheader(f"📊 {group_name} - 群组详情")
+                        
+                        # 显示群组信息
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.info(f"**群组ID:** {group_detail.get('id', '未知')}")
+                        with col2:
+                            st.info(f"**创建时间:** {group_detail.get('created_at', '未知')}")
+                        
+                        # 显示成员列表
+                        st.subheader("👥 成员列表")
+                        members = group_detail.get('members', [])
+                        if members:
+                            member_data = []
+                            for member in members:
+                                member_name = member.get('name', f"用户{member.get('id', '未知')}")
+                                member_id = member.get('id', '未知')
+
+                                # 为每个成员获取余额
+                                member_balance = 0
+                                for g in st.session_state.user_groups:
+                                    if g['group_id'] == selected_group[1] and g.get('member_id') == member_id:
+                                        member_balance = g.get('balance', 0)
+                                        break
                                 
-                                member_df = pd.DataFrame(member_data, columns=["成员ID", "成员名称", "余额"], index=range(1, len(member_data)+1))
-                                st.dataframe(member_df, use_container_width=True)
-                            else:
-                                st.info("该群组暂无成员")
+                                balance_str = f"{member_balance:.2f}"
+                                balance_color = "🟢" if member_balance >= 0 else "🔴"
+                                member_data.append([member_id, member_name, f"{balance_color} {balance_str}"])
                             
-                            # 显示交易记录
-                            st.subheader("📝 交易记录")
-                            transactions = group_detail.get('transactions', [])
-                            if transactions:
-                                transaction_data = []
-                                for t in transactions:
-                                    transaction_data.append([
-                                        t['id'],
-                                        t['name'],
-                                        f"{t['amount']:.2f}",
-                                        t['description'],
-                                        t['created_at']
-                                    ])
-                                
-                                transaction_df = pd.DataFrame(transaction_data, columns=["交易ID", "项目名称", "金额", "描述", "创建时间"], index=range(1, len(transaction_data)+1))
-                                st.dataframe(transaction_df, use_container_width=True)
-                            else:
-                                st.info("该群组暂无交易记录")
+                            member_df = pd.DataFrame(member_data, columns=["成员ID", "成员名称", "余额"], index=range(1, len(member_data)+1))
+                            st.dataframe(member_df, use_container_width=True)
                         else:
-                            st.error(f"获取群组详情失败: {response.text}")
+                            st.info("该群组暂无成员")
+                        
+                        # 显示交易记录
+                        st.subheader("📝 交易记录")
+                        transactions = group_detail.get('transactions', [])
+                        if transactions:
+                            transaction_data = []
+                            for t in transactions:
+                                t_name = t.get('name', f"交易{t.get('id', '')}")
+                                t_amount = t.get('amount', 0)
+                                t_desc = t.get('description', '')
+                                t_created = t.get('created_at', '')
+                                t_id = t.get('id', '')
+                                transaction_data.append([t_id, t_name, f"{t_amount:.2f}", t_desc, t_created])
+                            
+                            transaction_df = pd.DataFrame(transaction_data, columns=["交易ID", "项目名称", "金额", "描述", "创建时间"], index=range(1, len(transaction_data)+1))
+                            st.dataframe(transaction_df, use_container_width=True)
+                        else:
+                            st.info("该群组暂无交易记录")
+                        
                     except Exception as e:
                         st.error(f"获取群组详情出错: {str(e)}")
             else:
                 st.info("您还没有加入任何群组")
-    
-    # ==================== 确保下面的标签页在正确的位置 ====================
-    # ------------------------
-    # 使用兑换码（第三个标签页）
-    # ------------------------
+
+
+
+    # ---------- 兑换码（第三个标签页） ----------
     with tab3:
         st.subheader("🎫 使用兑换码")
-        with st.container(border=True):  # 添加边框效果
-            # 兑换码输入框
-            code = st.text_input("请输入兑换码", max_chars=10, placeholder="例如: ABC1234567")
-            
-            # 兑换按钮
-            if st.button("💡 兑换"):
-                if not code.strip():
-                    st.error("请输入兑换码")
-                else:
-                    try:
-                        # 调用兑换码API
-                        response = requests.post(
-                            f"{API}/redeem_code",
-                            json={
-                                "code": code,
-                                "user_id": user['id']
-                            }
-                        )
+        code = st.text_input("请输入兑换码", max_chars=10, placeholder="例如: ABC1234567")
+        if st.button("💡 兑换"):
+            if not code.strip():
+                st.error("请输入兑换码")
+            else:
+                try:
+                    response = requests.post(f"{API}/redeem_code", json={"code": code, "user_id": user['id']})
+                    if response.status_code == 200:
+                        data = response.json()
+                        st.success(f"兑换成功！获得: {data['amount']} 元")
+                        # 刷新用户信息
+                        response = requests.get(f"{API}/users/{user['id']}")
                         if response.status_code == 200:
-                            data = response.json()
-                            st.success(f"兑换成功！获得: {data['amount']} 元")
-                            # 刷新用户信息
-                            response = requests.get(f"{API}/users/{user['id']}")
-                            if response.status_code == 200:
-                                st.session_state.user = response.json()
-                                st.rerun()
-                        else:
-                            st.error(f"兑换失败: {response.json().get('detail', '兑换码无效')}")
-                    except Exception as e:
-                        st.error(f"兑换出错: {str(e)}")
-    
-    # ------------------------
-    # 交易记录（第四个标签页）
-    # ------------------------
+                            st.session_state.user = response.json()
+                            st.rerun()
+                    else:
+                        st.error(f"兑换失败: {response.json().get('detail','兑换码无效')}")
+                except Exception as e:
+                    st.error(f"兑换出错: {str(e)}")
+
+    # ---------- 交易记录（第四个标签页） ----------
     with tab4:
         st.subheader("📝 交易记录")
-        with st.container(border=True):  # 添加边框效果
-            try:
-                # 获取交易记录
-                response = requests.get(f"{API}/transactions", params={"user_id": user['id']})
-                if response.status_code == 200:
-                    transactions = response.json()
-                    if transactions:
-                        # 交易记录的DataFrame显示
-                        df = pd.DataFrame(transactions)
-                        
-                        # 确保时间列存在
-                        if 'timestamp' in df.columns:
-                            df['timestamp'] = pd.to_datetime(df['timestamp'])
-                            # 按时间倒序排列
-                            df = df.sort_values(by='timestamp', ascending=False)
-                        
-                        # 添加交易类型和金额显示
-                        df['交易类型'] = df['transaction_type'].map({
-                            'charge': '充值',
-                            'payment': '付款',
-                            'redeem': '兑换'
-                        })
-                        
-                        # 添加交易方式（如果有）
-                        if 'payment_method' in df.columns:
-                            df['交易方式'] = df['payment_method'].map({
-                                'alipay': '支付宝',
-                                'wechat': '微信支付'
-                            })
-                        
-                        # 选择要显示的列
-                        display_columns = ['timestamp', 'transaction_id', 'amount', '交易类型']
-                        if 'payment_method' in df.columns:
-                            display_columns.append('交易方式')
-                        if 'description' in df.columns:
-                            display_columns.append('description')
-                        
-                        # 重命名列
-                        df = df.rename(columns={
-                            'timestamp': '交易时间',
-                            'transaction_id': '交易ID',
-                            'amount': '金额',
-                            'description': '描述'
-                        })
-                        
-                        # 格式化金额显示
-                        df['金额'] = df['金额'].apply(lambda x: f"¥{x:.2f}")
-                        
-                        # 显示交易记录
-                        st.dataframe(df[display_columns], use_container_width=True)
-                    else:
-                        st.info("暂无交易记录")
+        try:
+            response = requests.get(f"{API}/transactions", params={"user_id": user['id']})
+            if response.status_code == 200:
+                transactions = response.json()
+                if transactions:
+                    df = pd.DataFrame(transactions)
+                    if 'timestamp' in df.columns:
+                        df['timestamp'] = pd.to_datetime(df['timestamp'])
+                        df = df.sort_values(by='timestamp', ascending=False)
+                    df['交易类型'] = df['transaction_type'].map({'charge':'充值','payment':'付款','redeem':'兑换'})
+                    display_columns = ['timestamp','transaction_id','amount','交易类型']
+                    df = df.rename(columns={'timestamp':'交易时间','transaction_id':'交易ID','amount':'金额','description':'描述'})
+                    df['金额'] = df['金额'].apply(lambda x: f"¥{x:.2f}")
+                    st.dataframe(df[display_columns], use_container_width=True)
                 else:
-                    st.error(f"获取交易记录失败: {response.text}")
-            except Exception as e:
-                st.error(f"获取交易记录出错: {str(e)}")
-    
-    # ------------------------
-    # 随机用户（第五个标签页）
-    # ------------------------
+                    st.info("暂无交易记录")
+            else:
+                st.error(f"获取交易记录失败: {response.text}")
+        except Exception as e:
+            st.error(f"获取交易记录出错: {str(e)}")
+
+    # ---------- 随机用户（第五个标签页） ----------
     with tab5:
         st.subheader("🎲 随机用户")
-        with st.container(border=True):  # 添加边框效果
-            # 获取随机用户信息
-            if st.button("🎲 获取随机用户"):
-                try:
-                    response = requests.get(f"{API}/users/random")
-                    if response.status_code == 200:
-                        random_user = response.json()
-                        st.success("✅ 获取随机用户成功")
-                        
-                        # 显示随机用户信息
-                        with st.container(border=True):
-                            st.subheader("👤 随机用户信息")
-                            st.markdown(f"**用户名:** {random_user['name']}")
-                            st.markdown(f"**用户ID:** {random_user['id']}")
-                            if random_user.get('public_info'):
-                                st.markdown(f"**公开信息:** {random_user['public_info']}")
-                    else:
-                        st.error(f"获取随机用户失败: {response.text}")
-                except Exception as e:
-                    st.error(f"获取随机用户出错: {str(e)}")
+        if st.button("🎲 获取随机用户"):
+            try:
+                response = requests.get(f"{API}/users/random")
+                if response.status_code == 200:
+                    random_user = response.json()
+                    st.success("✅ 获取随机用户成功")
+                    st.markdown(f"**用户名:** {random_user['name']}")
+                    st.markdown(f"**用户ID:** {random_user['id']}")
+                    if random_user.get('public_info'):
+                        st.markdown(f"**公开信息:** {random_user['public_info']}")
+                else:
+                    st.error(f"获取随机用户失败: {response.text}")
+            except Exception as e:
+                st.error(f"获取随机用户出错: {str(e)}")
