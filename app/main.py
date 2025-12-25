@@ -48,6 +48,15 @@ def search_users(name: str, session: Session = Depends(get_session)):
         return [user]  # 保持返回列表格式，确保前端兼容性
     return []
 
+@app.get("/users/random", response_model=schemas.UserOut)
+def get_random_user(session: Session = Depends(get_session)):
+    """获取随机用户"""
+    users = session.exec(select(User)).all()
+    if not users:
+        raise HTTPException(status_code=404, detail="没有用户可用")
+    
+    return random.choice(users)
+
 @app.get("/users/{user_id}", response_model=schemas.UserOut)
 def get_user(user_id: int, session: Session = Depends(get_session)):
     user = session.get(User, user_id)
@@ -135,16 +144,35 @@ def create_group(g: schemas.CreateGroup, session: Session = Depends(get_session)
     added_count = 0
     failed_count = 0
     
-    if g.member_ids:
-        for user_id in g.member_ids:
+    # 检查member_ids是否存在且不为空
+    member_ids = g.member_ids if g.member_ids else []
+    
+    if member_ids:
+        # 记录已添加的用户，避免重复添加
+        added_user_ids = set()
+        
+        for i, user_id in enumerate(member_ids):
             try:
-                crud.add_user_to_group(session, user_id, group.id)
+                # 跳过已添加的用户
+                if user_id in added_user_ids:
+                    continue
+                
+                # 第一个成员自动成为领导者
+                if i == 0:
+                    crud.add_user_to_group(session, user_id, group.id, is_leader=True)
+                else:
+                    crud.add_user_to_group(session, user_id, group.id)
+                    
                 added_count += 1
+                added_user_ids.add(user_id)
             except ValueError as e:
                 # 记录失败的添加
                 failed_count += 1
                 print(f"Failed to add user {user_id} to group {group.id}: {str(e)}")
                 continue
+    else:
+        # 当member_ids为空时，这是一个错误情况，因为前端应该总是传递至少包含创建者的ID
+        print("Error: No member_ids provided when creating group. Frontend should always include creator's ID.")
     
     # 提交会话确保数据保存
     session.commit()
@@ -184,11 +212,39 @@ def get_group(group_id: int, session: Session = Depends(get_session)):
             "group_id": member.group_id,
             "balance": member.balance,
             "joined_at": member.joined_at,
+            "is_leader": member.is_leader,
             "user": user
         }
         group_dict["members"].append(member_dict)
     
     return group_dict
+
+@app.post("/groups/{group_id}/add_member")
+def add_member_to_group(request: schemas.AddUserToGroup, group_id: int, session: Session = Depends(get_session)):
+    """添加成员到群组，只有群组领导者才能执行此操作"""
+    # 检查群组是否存在
+    group = session.get(Group, group_id)
+    if not group:
+        raise HTTPException(status_code=404, detail="群组不存在")
+    
+    # 检查当前用户是否是群组的领导者（前端需要在请求中提供当前用户ID）
+    leader = session.exec(select(GroupMember).where(
+        GroupMember.user_id == request.current_user_id,
+        GroupMember.group_id == group_id,
+        GroupMember.is_leader == True
+    )).first()
+    
+    if not leader:
+        raise HTTPException(status_code=403, detail="只有群组领导者才能添加成员")
+    
+    # 添加成员到群组
+    try:
+        member = crud.add_user_to_group(session, request.user_id, group_id)
+        return {"message": "成员添加成功", "member_id": member.id}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"添加成员时出错: {str(e)}")
 
 @app.delete("/groups/{group_id}")
 def delete_group(group_id: int, session: Session = Depends(get_session)):

@@ -196,7 +196,7 @@ def delete_group(session: Session, group_id: int) -> bool:
     session.commit()
     return True
 
-def add_user_to_group(session: Session, user_id: int, group_id: int, initial_balance: float = 0.0) -> GroupMember:
+def add_user_to_group(session: Session, user_id: int, group_id: int, initial_balance: float = 0.0, is_leader: bool = False) -> GroupMember:
     """添加用户到群组并设置初始余额"""
     # 检查用户和群组是否存在
     user = get_user(session, user_id)
@@ -217,7 +217,8 @@ def add_user_to_group(session: Session, user_id: int, group_id: int, initial_bal
     member = GroupMember(
         user_id=user_id,
         group_id=group_id,
-        balance=initial_balance
+        balance=initial_balance,
+        is_leader=is_leader
     )
     session.add(member)
     session.commit()

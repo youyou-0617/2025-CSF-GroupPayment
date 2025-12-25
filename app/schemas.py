@@ -32,6 +32,7 @@ class AddUserToGroup(BaseModel):
     user_id: int
     group_id: Optional[int] = None
     initial_balance: float = 0.0
+    current_user_id: int  # 当前登录用户的ID，用于验证是否是群组领导者
 
 
 # 更新用户群组余额

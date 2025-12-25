@@ -23,6 +23,7 @@ class GroupMember(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     group_id: int = Field(foreign_key="group.id", index=True)
     balance: float = 0.0  # 用户在该群组的余额
+    is_leader: bool = False  # 是否为群组领导者
     joined_at: datetime = Field(default_factory=datetime.utcnow)
     
     # 确保每个用户在一个群组中只有一条记录
