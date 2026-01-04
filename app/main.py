@@ -42,11 +42,13 @@ def list_users(session: Session = Depends(get_session)):
 
 @app.get("/users/search", response_model=list[schemas.UserOut])
 def search_users(name: str, session: Session = Depends(get_session)):
-    """根据用户名搜索用户（精确匹配）"""
-    user = session.exec(select(User).where(User.name == name)).first()
-    if user:
-        return [user]  # 保持返回列表格式，确保前端兼容性
-    return []
+    """根据用户名前缀搜索用户（推荐列表）"""
+    if not name.strip():
+        return []
+    users = session.exec(
+        select(User).where(User.name.ilike(f"{name}%")).limit(10)
+    ).all()
+    return users
 
 @app.get("/users/random", response_model=schemas.UserOut)
 def get_random_user(session: Session = Depends(get_session)):
