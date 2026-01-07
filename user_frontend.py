@@ -25,34 +25,41 @@ API = f"http://{get_local_ip()}:8001"
 # 添加自定义CSS样式
 st.markdown("""
 <style>
-@import url("https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
 
 :root {
     --brand: #0f766e;
-    --brand-strong: rgba(15, 118, 110, 0.7);
-    --brand-soft: rgba(15, 118, 110, 0.3);
-    --brand-hover: rgba(15, 118, 110, 0.18);
+    --brand-strong: #0c5c56;
+    --brand-soft: rgba(15, 118, 110, 0.12);
+    --brand-hover: rgba(15, 118, 110, 0.2);
     --accent: #f97316;
     --ink: #0b1220;
     --muted: #64748b;
-    --surface: #ffffff;
-    --surface-2: #f8fafc;
-    --border: #e2e8f0;
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-2: rgba(255, 255, 255, 0.7);
+    --border: rgba(15, 23, 42, 0.08);
+    --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
+    --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.1);
+    --radius-lg: 24px;
+    --radius-md: 16px;
 }
 
 html, body, [class*="stApp"] {
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans SC", "Space Grotesk", "Avenir Next", "Helvetica Neue", sans-serif;
+    font-family: "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans SC", "Space Grotesk", "Avenir Next", "Helvetica Neue", sans-serif;
     color: var(--ink);
 }
 
-.stApp {
-    background: #ffffff;
-}
-
 .block-container {
-    max-width: 1120px;
-    padding-top: 2rem;
-    padding-bottom: 3rem;
+    max-width: 1100px;
+    padding-top: 2.5rem;
+    padding-bottom: 3.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: fadeInUp 0.6s ease;
 }
 
 h1, h2, h3, h4 {
@@ -62,45 +69,35 @@ h1, h2, h3, h4 {
 
 h1 {
     font-weight: 700;
-    font-size: 2.1rem;
+    font-size: 2.2rem;
 }
 
 h2 {
     font-weight: 600;
-    font-size: 1.6rem;
+    font-size: 1.55rem;
 }
 
 h3 {
     font-weight: 600;
-    font-size: 1.3rem;
-}
-
-.stTabs [data-baseweb="tab"] {
-    background: transparent;
-    border-radius: 999px;
-    padding: 6px 14px;
-    color: var(--muted);
-}
-
-.stTabs [data-baseweb="tab"][aria-selected="true"] {
-    background: rgba(15, 118, 110, 0.12);
-    color: var(--brand);
-    border: 1px solid rgba(15, 118, 110, 0.25);
+    font-size: 1.25rem;
 }
 
 .stButton > button,
 .stFormSubmitButton > button {
-    background: var(--brand) !important;
+    background: linear-gradient(135deg, var(--brand), #12a09a) !important;
     color: #ffffff !important;
     border: none !important;
-    border-radius: 12px !important;
-    padding: 0.5rem 1rem !important;
-    box-shadow: 0 10px 20px rgba(15, 118, 110, 0.18) !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 1.2rem !important;
+    box-shadow: 0 12px 24px rgba(15, 118, 110, 0.22) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stButton > button:hover,
 .stFormSubmitButton > button:hover {
-    background: #0d5f58 !important;
+    background: linear-gradient(135deg, #0d5f58, #0f766e) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 28px rgba(15, 118, 110, 0.28) !important;
 }
 
 .stTextInput input,
@@ -108,9 +105,10 @@ h3 {
 .stNumberInput input,
 .stSelectbox [data-baseweb="select"] > div,
 .stMultiSelect [data-baseweb="select"] > div {
-    background: var(--surface) !important;
+    background: rgba(255, 255, 255, 0.96) !important;
     border: 1px solid var(--border) !important;
-    border-radius: 12px !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
 .stTextInput input:focus,
@@ -123,31 +121,27 @@ h3 {
 }
 
 .stAlert {
-    border-radius: 12px !important;
+    border-radius: 16px !important;
 }
 
 /* App-level theming fixes */
 html, body {
-    background: #ffffff !important;
+    background: radial-gradient(circle at top, #ecfeff 0%, #f8fafc 40%, #eef2f7 100%) !important;
     background-attachment: fixed !important;
 }
 
 .stApp {
-    background: #ffffff !important;
+    background: transparent !important;
     background-attachment: fixed !important;
 }
 
 [data-testid="stAppViewContainer"] {
-    background: #ffffff !important;
+    background: transparent !important;
     background-attachment: fixed !important;
 }
 
 [data-testid="stAppViewContainer"] > .main,
 [data-testid="stAppViewContainer"] > .main > div {
-    background: transparent !important;
-}
-
-.block-container {
     background: transparent !important;
 }
 
@@ -159,7 +153,7 @@ html, body {
 
 
 [data-testid="stAppViewContainer"] * {
-    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans SC", "Space Grotesk", "Avenir Next", "Helvetica Neue", sans-serif !important;
+    font-family: "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans SC", "Space Grotesk", "Avenir Next", "Helvetica Neue", sans-serif !important;
 }
 
 /* Top toolbar / header */
@@ -172,6 +166,28 @@ html, body {
     background: transparent !important;
 }
 
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(15, 118, 110, 0.08);
+    padding: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 118, 110, 0.1);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--brand);
+    border: 1px solid rgba(15, 118, 110, 0.25);
+    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
+}
 
 /* 标题强调样式 */
 .stMarkdown h2,
@@ -197,12 +213,12 @@ html, body {
 
 /* 提示卡片统一颜色 */
 .stAlert {
-    border-radius: 12px !important;
-    border: 1px solid rgba(15, 118, 110, 0.15) !important;
+    border-radius: 16px !important;
+    border: 1px solid rgba(15, 118, 110, 0.18) !important;
 }
 
 .stAlert[data-baseweb="notification"] {
-    background: rgba(15, 118, 110, 0.08) !important;
+    background: rgba(15, 118, 110, 0.1) !important;
     color: var(--ink) !important;
 }
 
@@ -336,6 +352,39 @@ button[title="创建新群组"]:focus {
 }
 button[title="创建新群组"] * {
     color: #000000 !important;
+}
+
+/* Card-like containers */
+div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+    background: var(--surface-2) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: var(--shadow-md) !important;
+}
+
+/* Tables */
+.stDataFrame {
+    border-radius: 16px !important;
+    overflow: hidden;
+    border: 1px solid var(--border) !important;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+}
+
+/* Sidebar polish */
+[data-testid="stSidebar"] {
+    background: rgba(248, 250, 252, 0.9) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 </style>
