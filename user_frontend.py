@@ -37,7 +37,8 @@ st.markdown("""
     --muted: #64748b;
     --surface: rgba(255, 255, 255, 0.92);
     --surface-2: rgba(255, 255, 255, 0.7);
-    --border: rgba(15, 23, 42, 0.08);
+    --border: rgba(15, 23, 42, 0.06);
+    --border-strong: rgba(15, 23, 42, 0.1);
     --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
     --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.1);
     --radius-lg: 24px;
@@ -56,7 +57,7 @@ html, body, [class*="stApp"] {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lg);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     animation: fadeInUp 0.6s ease;
@@ -356,18 +357,27 @@ button[title="创建新群组"] * {
 
 /* Card-like containers */
 div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
-    background: var(--surface-2) !important;
+    background: rgba(255, 255, 255, 0.65) !important;
     border: 1px solid var(--border) !important;
     border-radius: var(--radius-md) !important;
-    box-shadow: var(--shadow-md) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05) !important;
 }
 
 /* Tables */
 .stDataFrame {
     border-radius: 16px !important;
     overflow: hidden;
+    border: 1px solid var(--border-strong) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Forms */
+div[data-testid="stForm"] {
     border: 1px solid var(--border) !important;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08) !important;
+    background: rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+    padding: 0.75rem !important;
+    border-radius: 14px !important;
 }
 
 /* Sidebar polish */
@@ -508,7 +518,7 @@ else:
         # 个人信息区块
         st.subheader("📋 个人信息")
 
-        with st.container(border=True):  # 添加边框效果
+        with st.container():
             col1, col2 = st.columns(2)
             with col1:
                 st.info(f"**用户名**: {user['name']}")
@@ -521,7 +531,7 @@ else:
         
         st.subheader("📊 我的群组和余额")
         # 群组和余额区块
-        with st.container(border=True):  # 添加边框效果
+        with st.container():
             # 首先显示群组信息（从会话状态或API获取）
             if st.session_state.user_groups:
                 # 显示用户的群组列表和余额
@@ -593,47 +603,36 @@ else:
         # 创建群组弹窗
         @st.dialog("➕ 创建新群组")
         def create_group_dialog():
-            st.subheader("📝 创建新群组")
             
             # 搜索用户功能
-            with st.container(border=True):
+            with st.container():
                 st.subheader("🔍 搜索用户")
-                search_query = st.text_input(
+                if 'all_users_cache' not in st.session_state:
+                    try:
+                        response = requests.get(f"{API}/users")
+                        if response.status_code == 200:
+                            st.session_state.all_users_cache = response.json()
+                        else:
+                            st.session_state.all_users_cache = []
+                    except Exception:
+                        st.session_state.all_users_cache = []
+                
+                options = {
+                    f"{u['name']} (ID: {u['id']})": u
+                    for u in st.session_state.get('all_users_cache', [])
+                }
+                selected_label = st.selectbox(
                     "输入用户名首字母自动推荐",
-                    key="search_users_sidebar"
+                    options=list(options.keys()),
+                    index=None,
+                    placeholder="输入首字母或前几个字母进行筛选",
+                    key="search_users_selectbox"
                 )
                 
-                suggested_users = []
-                if search_query.strip():
-                    try:
-                        response = requests.get(
-                            f"{API}/users/search",
-                            params={"name": search_query}
-                        )
-                        if response.status_code == 200:
-                            users = response.json()
-                            suggested_users = users
-                            if not suggested_users:
-                                st.info("未找到匹配的用户")
-                        else:
-                            st.error(f"搜索失败: {response.text}")
-                    except Exception as e:
-                        st.error(f"搜索出错: {str(e)}")
-                
-                if suggested_users:
-                    options = {
-                        f"{u['name']} (ID: {u['id']})": u for u in suggested_users
-                    }
-                    st.caption("推荐用户")
-                    selected_label = st.radio(
-                        "推荐用户",
-                        options=list(options.keys()),
-                        key="search_users_suggestions",
-                        label_visibility="collapsed"
-                    )
+                if selected_label:
                     found_user = options[selected_label]
                     
-                    with st.container(border=True):
+                    with st.container():
                         st.subheader("👤 用户信息")
                         st.markdown(f"**用户名:** {found_user['name']}")
                         st.markdown(f"**用户ID:** {found_user['id']}")
@@ -853,7 +852,7 @@ else:
                 create_group_dialog()
         
         # 群组详情显示（原功能）
-        with st.container(border=True):
+        with st.container():
             # 从用户所在的群组中选择
             if st.session_state.user_groups:
                 group_options = [(g['group_name'], g['group_id']) for g in st.session_state.user_groups]
@@ -879,8 +878,6 @@ else:
                             with col2:
                                 st.info(f"**创建时间:** {group_detail.get('created_at', '未知')}")
                             
-                            # 显示成员列表
-                            st.subheader("👥 成员列表")
                             members = group_detail.get('members', [])
                             
                             if members:
@@ -901,42 +898,30 @@ else:
                                 # 通过搜索用户名添加成员
                                 st.subheader("➕ 添加成员")
                                 with st.container(border=True):
-                                    st.markdown("**通过用户名搜索添加**")
-                                    search_query = st.text_input(
+                                    st.markdown("**通过用户名快速搜索添加**")
+                                    if 'all_users_cache' not in st.session_state:
+                                        try:
+                                            response = requests.get(f"{API}/users")
+                                            if response.status_code == 200:
+                                                st.session_state.all_users_cache = response.json()
+                                            else:
+                                                st.session_state.all_users_cache = []
+                                        except Exception:
+                                            st.session_state.all_users_cache = []
+                                    options = {
+                                        f"{u['name']} (ID: {u['id']})": u
+                                        for u in st.session_state.get('all_users_cache', [])
+                                    }
+                                    selected_label = st.selectbox(
                                         "输入用户名首字母自动推荐",
-                                        key="add_member_search_query"
+                                        options=list(options.keys()),
+                                        index=None,
+                                        placeholder="输入首字母或前几个字母进行筛选",
+                                        key="add_member_search_selectbox"
                                     )
                                     
-                                    suggested_users = []
-                                    if search_query.strip():
-                                        try:
-                                            response = requests.get(
-                                                f"{API}/users/search",
-                                                params={"name": search_query}
-                                            )
-                                            if response.status_code == 200:
-                                                users = response.json()
-                                                suggested_users = users
-                                                if not suggested_users:
-                                                    st.info("未找到匹配的用户")
-                                            else:
-                                                st.error(f"搜索失败: {response.text}")
-                                        except Exception as e:
-                                            st.error(f"搜索出错: {str(e)}")
-                                    
-                                    if suggested_users:
-                                        options = {
-                                            f"{u['name']} (ID: {u['id']})": u for u in suggested_users
-                                        }
-                                        st.caption("推荐用户")
-                                        selected_label = st.radio(
-                                            "推荐用户",
-                                            options=list(options.keys()),
-                                            key="add_member_search_suggestions",
-                                            label_visibility="collapsed"
-                                        )
+                                    if selected_label:
                                         found_user = options[selected_label]
-                                        
                                         with st.container(border=True):
                                             st.subheader("👤 用户信息")
                                             st.markdown(f"**用户名:** {found_user['name']}")
@@ -1007,6 +992,7 @@ else:
                                                     f"API调用详情: {e.response.text if hasattr(e, 'response') else '无详细信息'}"
                                                 )
 
+                                st.subheader("👥 成员列表")
                                 member_data = []
                                 for member in members:
                                     # 获取成员的用户信息和余额
@@ -1155,7 +1141,7 @@ else:
     # ------------------------
     with tab3:
         st.subheader("🎫 使用兑换码")
-        with st.container(border=True):  # 添加边框效果
+        with st.container():  # 添加边框效果
             # 兑换码输入框
             code = st.text_input("请输入兑换码", max_chars=10, placeholder="例如: ABC1234567")
             
@@ -1191,7 +1177,7 @@ else:
     # ------------------------
     with tab4:
         st.subheader("📝 交易记录")
-        with st.container(border=True):  # 添加边框效果
+        with st.container():  # 添加边框效果
             try:
                 # 获取交易记录
                 response = requests.get(f"{API}/transactions")
@@ -1266,7 +1252,7 @@ else:
     # ------------------------
     with tab5:
         st.subheader("🎲 随机用户")
-        with st.container(border=True):  # 添加边框效果
+        with st.container():  # 添加边框效果
             # 获取随机用户信息
             if st.button("🎲 获取随机用户"):
                 try:
