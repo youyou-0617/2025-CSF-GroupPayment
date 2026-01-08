@@ -355,11 +355,11 @@ button[title="创建新群组"] * {
     color: #000000 !important;
 }
 
-/* Card-like containers */
-div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+/* Containers */
+div[data-testid="stContainer"] {
     background: rgba(255, 255, 255, 0.65) !important;
-    border: 1px solid var(--border) !important;
-    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border-strong) !important;
+    border-radius: 16px !important;
     box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05) !important;
 }
 
@@ -899,6 +899,7 @@ else:
                                 st.subheader("➕ 添加成员")
                                 with st.container(border=True):
                                     st.markdown("**通过用户名快速搜索添加**")
+                                    st.caption("输入姓名首字母或前几个字母进行筛选。")
                                     if 'all_users_cache' not in st.session_state:
                                         try:
                                             response = requests.get(f"{API}/users")
@@ -922,36 +923,35 @@ else:
                                     
                                     if selected_label:
                                         found_user = options[selected_label]
-                                        with st.container(border=True):
-                                            st.subheader("👤 用户信息")
-                                            st.markdown(f"**用户名:** {found_user['name']}")
-                                            st.markdown(f"**用户ID:** {found_user['id']}")
-                                            st.markdown(f"**公开信息:** {found_user.get('public_info', '无')}")
-                                            
-                                            add_clicked = st.button(
-                                                "➕ 添加到群组",
-                                                key=f"add_member_{found_user['id']}_btn"
-                                            )
-                                            if add_clicked:
-                                                try:
-                                                    response = requests.post(
-                                                        f"{API}/groups/{selected_group[1]}/add_member",
-                                                        json={
-                                                            "current_user_id": user['id'],
-                                                            "user_id": int(found_user['id'])
-                                                        }
-                                                    )
-                                                    if response.status_code == 200:
-                                                        st.success("✅ 成员添加成功")
-                                                        st.rerun()
-                                                    else:
-                                                        error_detail = response.json().get('detail', '添加失败')
-                                                        st.error(f"❌ 添加成员失败: {error_detail}")
-                                                except Exception as e:
-                                                    st.error(f"添加成员出错: {str(e)}")
-                                                    st.error(
-                                                        f"API调用详情: {e.response.text if hasattr(e, 'response') else '无详细信息'}"
-                                                    )
+                                        st.subheader("👤 用户信息")
+                                        st.markdown(f"**用户名:** {found_user['name']}")
+                                        st.markdown(f"**用户ID:** {found_user['id']}")
+                                        st.markdown(f"**公开信息:** {found_user.get('public_info', '无')}")
+                                        
+                                        add_clicked = st.button(
+                                            "➕ 添加到群组",
+                                            key=f"add_member_{found_user['id']}_btn"
+                                        )
+                                        if add_clicked:
+                                            try:
+                                                response = requests.post(
+                                                    f"{API}/groups/{selected_group[1]}/add_member",
+                                                    json={
+                                                        "current_user_id": user['id'],
+                                                        "user_id": int(found_user['id'])
+                                                    }
+                                                )
+                                                if response.status_code == 200:
+                                                    st.success("✅ 成员添加成功")
+                                                    st.rerun()
+                                                else:
+                                                    error_detail = response.json().get('detail', '添加失败')
+                                                    st.error(f"❌ 添加成员失败: {error_detail}")
+                                            except Exception as e:
+                                                st.error(f"添加成员出错: {str(e)}")
+                                                st.error(
+                                                    f"API调用详情: {e.response.text if hasattr(e, 'response') else '无详细信息'}"
+                                                )
 
                                 # 备用入口：手动输入 ID
                                 with st.container(border=True):
