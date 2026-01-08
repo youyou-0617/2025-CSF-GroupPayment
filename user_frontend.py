@@ -25,12 +25,221 @@ API = f"http://{get_local_ip()}:8001"
 # 添加自定义CSS样式
 st.markdown("""
 <style>
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap");
+
+:root {
+    --brand: #0f766e;
+    --brand-strong: #0c5c56;
+    --brand-soft: rgba(15, 118, 110, 0.12);
+    --brand-hover: rgba(15, 118, 110, 0.2);
+    --accent: #f97316;
+    --ink: #0b1220;
+    --muted: #64748b;
+    --surface: rgba(255, 255, 255, 0.92);
+    --surface-2: rgba(255, 255, 255, 0.7);
+    --border: rgba(15, 23, 42, 0.06);
+    --border-strong: rgba(15, 23, 42, 0.1);
+    --shadow-lg: 0 24px 60px rgba(15, 23, 42, 0.12);
+    --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.1);
+    --radius-lg: 24px;
+    --radius-md: 16px;
+}
+
+html, body, [class*="stApp"] {
+    font-family: "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans SC", "Space Grotesk", "Avenir Next", "Helvetica Neue", sans-serif;
+    color: var(--ink);
+}
+
+.block-container {
+    max-width: 1100px;
+    padding-top: 2.5rem;
+    padding-bottom: 3.5rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    animation: fadeInUp 0.6s ease;
+}
+
+h1, h2, h3, h4 {
+    letter-spacing: -0.02em;
+    color: var(--ink);
+}
+
+h1 {
+    font-weight: 700;
+    font-size: 2.2rem;
+}
+
+h2 {
+    font-weight: 600;
+    font-size: 1.55rem;
+}
+
+h3 {
+    font-weight: 600;
+    font-size: 1.25rem;
+}
+
+.stButton > button,
+.stFormSubmitButton > button {
+    background: linear-gradient(135deg, var(--brand), #12a09a) !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 14px !important;
+    padding: 0.55rem 1.2rem !important;
+    box-shadow: 0 12px 24px rgba(15, 118, 110, 0.22) !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stButton > button:hover,
+.stFormSubmitButton > button:hover {
+    background: linear-gradient(135deg, #0d5f58, #0f766e) !important;
+    transform: translateY(-1px);
+    box-shadow: 0 16px 28px rgba(15, 118, 110, 0.28) !important;
+}
+
+.stTextInput input,
+.stTextArea textarea,
+.stNumberInput input,
+.stSelectbox [data-baseweb="select"] > div,
+.stMultiSelect [data-baseweb="select"] > div {
+    background: rgba(255, 255, 255, 0.96) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: 14px !important;
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.stTextInput input:focus,
+.stTextArea textarea:focus,
+.stNumberInput input:focus,
+.stSelectbox [data-baseweb="select"] > div:focus-within,
+.stMultiSelect [data-baseweb="select"] > div:focus-within {
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18) !important;
+    border-color: rgba(15, 118, 110, 0.45) !important;
+}
+
+.stAlert {
+    border-radius: 16px !important;
+}
+
+/* App-level theming fixes */
+html, body {
+    background: radial-gradient(circle at top, #ecfeff 0%, #f8fafc 40%, #eef2f7 100%) !important;
+    background-attachment: fixed !important;
+}
+
+.stApp {
+    background: transparent !important;
+    background-attachment: fixed !important;
+}
+
+[data-testid="stAppViewContainer"] {
+    background: transparent !important;
+    background-attachment: fixed !important;
+}
+
+[data-testid="stAppViewContainer"] > .main,
+[data-testid="stAppViewContainer"] > .main > div {
+    background: transparent !important;
+}
+
+[data-testid="stAppViewContainer"] [data-testid="stVerticalBlock"],
+[data-testid="stAppViewContainer"] section,
+[data-testid="stAppViewContainer"] .block-container {
+    background: transparent !important;
+}
+
+
+[data-testid="stAppViewContainer"] * {
+    font-family: "Manrope", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Heiti SC", "Noto Sans CJK SC", "Source Han Sans SC", "Space Grotesk", "Avenir Next", "Helvetica Neue", sans-serif !important;
+}
+
+/* Top toolbar / header */
+[data-testid="stHeader"] {
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stToolbar"] {
+    background: transparent !important;
+}
+
+.stTabs [data-baseweb="tab-list"] {
+    background: rgba(15, 118, 110, 0.08);
+    padding: 6px;
+    border-radius: 999px;
+    border: 1px solid rgba(15, 118, 110, 0.1);
+    box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.stTabs [data-baseweb="tab"] {
+    background: transparent;
+    border-radius: 999px;
+    padding: 6px 14px;
+    color: var(--muted);
+    font-weight: 600;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--brand);
+    border: 1px solid rgba(15, 118, 110, 0.25);
+    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.12);
+}
+
+/* 标题强调样式 */
+.stMarkdown h2,
+.stMarkdown h3,
+.stMarkdown h4 {
+    position: relative;
+    padding-left: 10px;
+}
+
+.stMarkdown h2::before,
+.stMarkdown h3::before,
+.stMarkdown h4::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 60%;
+    background: var(--brand);
+    border-radius: 999px;
+}
+
+/* 提示卡片统一颜色 */
+.stAlert {
+    border-radius: 16px !important;
+    border: 1px solid rgba(15, 118, 110, 0.18) !important;
+}
+
+.stAlert[data-baseweb="notification"] {
+    background: rgba(15, 118, 110, 0.1) !important;
+    color: var(--ink) !important;
+}
+
+/* 错误提示使用更柔和的红 */
+.stAlert[role="alert"] {
+    background: rgba(239, 68, 68, 0.08) !important;
+    border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+/* 信息提示稍微降噪 */
+.stInfo, .stSuccess {
+    border-left: 4px solid var(--brand) !important;
+}
+
 /* 覆盖Streamlit所有可能的选中单元格样式 - 最高优先级 */
 .stDataFrame td,
 .stDataFrame tr,
 .stDataFrame table {
-    --dataframe__cell--selected-background-color: rgba(0, 123, 255, 0.3) !important;
-    --dataframe__cell--selected-border-color: rgba(0, 123, 255, 0.7) !important;
+    --dataframe__cell--selected-background-color: rgba(15, 118, 110, 0.3) !important;
+    --dataframe__cell--selected-border-color: rgba(15, 118, 110, 0.7) !important;
 }
 
 /* 直接覆盖单元格的所有选中、聚焦、激活状态 */
@@ -38,8 +247,8 @@ st.markdown("""
 .stDataFrame td:active,
 .stDataFrame td[data-selected="true"],
 .stDataFrame td:focus-within {
-    background-color: rgba(0, 123, 255, 0.3) !important;
-    border: 2px solid rgba(0, 123, 255, 0.7) !important;
+    background-color: rgba(15, 118, 110, 0.3) !important;
+    border: 2px solid rgba(15, 118, 110, 0.7) !important;
     box-shadow: none !important;
     outline: none !important;
     -webkit-tap-highlight-color: transparent !important;
@@ -47,34 +256,34 @@ st.markdown("""
 
 /* 处理悬停状态 */
 .stDataFrame td:hover {
-    background-color: rgba(0, 123, 255, 0.2) !important;
-    border-color: rgba(0, 123, 255, 0.5) !important;
+    background-color: rgba(15, 118, 110, 0.2) !important;
+    border-color: rgba(15, 118, 110, 0.5) !important;
 }
 
 /* 确保表头样式不受影响 */
 .stDataFrame th {
-    background-color: #f0f2f6 !important;
+    background-color: #eef2f7 !important;
 }
 
 /* 覆盖Streamlit内部样式 - 确保选中状态是蓝色 */
 [data-testid="stDataFrame"] td:focus,
 [data-testid="stDataFrame"] td:active,
 [data-testid="stDataFrame"] td[data-selected="true"] {
-    background-color: rgba(0, 123, 255, 0.3) !important;
-    border: 2px solid rgba(0, 123, 255, 0.7) !important;
+    background-color: rgba(15, 118, 110, 0.3) !important;
+    border: 2px solid rgba(15, 118, 110, 0.7) !important;
 }
 
 /* 增强悬停效果 */
 [data-testid="stDataFrame"] td:hover {
-    background-color: rgba(0, 123, 255, 0.2) !important;
-    border-color: rgba(0, 123, 255, 0.5) !important;
+    background-color: rgba(15, 118, 110, 0.2) !important;
+    border-color: rgba(15, 118, 110, 0.5) !important;
 }
 
 /* 重置任何可能的默认选中样式 */
 * {
-    --primary-color: #007bff !important;
-    --secondary-color: #007bff !important;
-    --accent-color: #007bff !important;
+    --primary-color: #0f766e !important;
+    --secondary-color: #0f766e !important;
+    --accent-color: #0f766e !important;
 }
 
 /* 模态弹窗样式 - 使用更高优先级的选择器 */
@@ -104,6 +313,90 @@ div[data-modal="content"] {
     overflow-y: auto !important;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
 }
+
+/* 搜索建议列表样式 */
+div[data-testid="stRadio"] > div {
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    padding: 6px 8px;
+    background: #ffffff;
+    max-height: 180px;
+    overflow-y: auto;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+div[data-testid="stRadio"] label {
+    margin: 2px 0;
+}
+
+
+
+
+/* 创建群组按钮样式 */
+button[title="创建新群组"] {
+    background: transparent !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 6px !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+}
+button[title="创建新群组"]:hover,
+button[title="创建新群组"]:active,
+button[title="创建新群组"]:focus {
+    background: transparent !important;
+    color: #000000 !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+button[title="创建新群组"] * {
+    color: #000000 !important;
+}
+
+/* Card-like containers */
+div[data-testid="stVerticalBlock"] > div[data-testid="stContainer"] {
+    background: rgba(255, 255, 255, 0.65) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-md) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Tables */
+.stDataFrame {
+    border-radius: 16px !important;
+    overflow: hidden;
+    border: 1px solid var(--border-strong) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Forms */
+div[data-testid="stForm"] {
+    border: 1px solid var(--border) !important;
+    background: rgba(255, 255, 255, 0.55) !important;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04) !important;
+    padding: 0.75rem !important;
+    border-radius: 14px !important;
+}
+
+/* Sidebar polish */
+[data-testid="stSidebar"] {
+    background: rgba(248, 250, 252, 0.9) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -225,7 +518,7 @@ else:
         # 个人信息区块
         st.subheader("📋 个人信息")
 
-        with st.container(border=True):  # 添加边框效果
+        with st.container():
             col1, col2 = st.columns(2)
             with col1:
                 st.info(f"**用户名**: {user['name']}")
@@ -238,7 +531,7 @@ else:
         
         st.subheader("📊 我的群组和余额")
         # 群组和余额区块
-        with st.container(border=True):  # 添加边框效果
+        with st.container():
             # 首先显示群组信息（从会话状态或API获取）
             if st.session_state.user_groups:
                 # 显示用户的群组列表和余额
@@ -303,50 +596,216 @@ else:
     # ------------------------
     # 在登录后的主页面部分，修改群组详情标签页中的侧边栏代码：
     with tab2:
-        # 添加创建群组按钮
-        col1, col2 = st.columns([1, 0.1])
-        with col1:
-            st.subheader("👥 群组详情")
-        with col2:
-            # 显示创建群组按钮
-            if st.button("➕", key="create_group_button", help="创建新群组"):
-                st.session_state.show_create_group = True
-        
         # 初始化用户ID列表的状态
         if 'user_id_input' not in st.session_state:
             st.session_state.user_id_input = ""
         
-        # 在侧边栏显示创建群组表单
-        if st.session_state.get('show_create_group', False):
-            with st.sidebar:
-                st.header("➕ 创建新群组")
-                
-                # 关闭按钮
-                if st.button("❌ 关闭", key="close_create_group"):
-                    st.session_state.show_create_group = False
-                    st.rerun()
-                
-                # 创建群组表单
-                st.write("---")
-                st.subheader("📝 创建群组")
-
-                # 使用表单包装创建群组功能
-                with st.form(key="create_group_final_form"):
-                    group_name = st.text_input("群组名称", placeholder="输入新群组的名称")
-                    
-                    # 简化的提示信息
-                    st.info("创建后，您可以在群组详情中添加其他成员")
-                    
-                    # 提交按钮
-                    create_clicked = st.form_submit_button("✅ 创建群组", use_container_width=True)
-                    
-                    if create_clicked:
-                        if not group_name.strip():
-                            st.error("请输入群组名称")
+        # 创建群组弹窗
+        @st.dialog("➕ 创建新群组")
+        def create_group_dialog():
+            
+            # 搜索用户功能
+            with st.container():
+                st.subheader("🔍 搜索用户")
+                if 'all_users_cache' not in st.session_state:
+                    try:
+                        response = requests.get(f"{API}/users")
+                        if response.status_code == 200:
+                            st.session_state.all_users_cache = response.json()
                         else:
-                            # 只包含当前用户自己的群组
-                            user_ids = {user['id']}
+                            st.session_state.all_users_cache = []
+                    except Exception:
+                        st.session_state.all_users_cache = []
+                
+                options = {
+                    f"{u['name']} (ID: {u['id']})": u
+                    for u in st.session_state.get('all_users_cache', [])
+                }
+                selected_label = st.selectbox(
+                    "输入用户名首字母自动推荐",
+                    options=list(options.keys()),
+                    index=None,
+                    placeholder="输入首字母或前几个字母进行筛选",
+                    key="search_users_selectbox"
+                )
+                
+                if selected_label:
+                    found_user = options[selected_label]
+                    
+                    with st.container():
+                        st.subheader("👤 用户信息")
+                        st.markdown(f"**用户名:** {found_user['name']}")
+                        st.markdown(f"**用户ID:** {found_user['id']}")
+                        st.markdown(f"**公开信息:** {found_user.get('public_info', '无')}")
+                        
+                        add_clicked = st.button(
+                            "➕ 添加到群组列表",
+                            key=f"add_user_{found_user['id']}_sidebar"
+                        )
+                        if add_clicked:
+                            current_input = st.session_state.get('user_id_input', '')
+                            user_id_str = str(found_user['id'])
+                            if user_id_str in current_input.split(','):
+                                st.warning(f"用户ID {found_user['id']} 已经在列表中")
+                            else:
+                                if current_input:
+                                    new_input = f"{current_input},{found_user['id']}"
+                                else:
+                                    new_input = str(found_user['id'])
+                                st.session_state.user_id_input = new_input
+                                st.success(f"✅ 已添加用户ID {found_user['id']} 到列表中")
+                                st.rerun()
+            
+            st.divider()
+            st.subheader("📋 已选择用户")
+            
+            # 当前用户ID列表
+            current_ids_input = st.session_state.get('user_id_input', '')
+            
+            # 显示当前已添加的用户
+            if current_ids_input:
+                user_ids_list = [id.strip() for id in current_ids_input.split(',') if id.strip()]
+                st.write(f"**已选择 {len(user_ids_list)} 个用户:**")
+                
+                # 为每个用户显示信息
+                for idx, user_id in enumerate(user_ids_list):
+                    col_user, col_delete = st.columns([4, 1])
+                    with col_user:
+                        try:
+                            user_response = requests.get(f"{API}/users/{user_id}")
+                            if user_response.status_code == 200:
+                                user_info = user_response.json()
+                                # 标记当前用户
+                                is_self = str(user_id) == str(user['id'])
+                                self_mark = " (您)" if is_self else ""
+                                st.write(f"{idx+1}. {user_info['name']} (ID: {user_id}){self_mark}")
+                            else:
+                                st.write(f"{idx+1}. 未知用户 (ID: {user_id})")
+                        except Exception:
+                            st.write(f"{idx+1}. 用户ID: {user_id}")
+                    
+                    with col_delete:
+                        # 删除按钮 - 自己也可以删除
+                        delete_clicked = st.button("❌", key=f"delete_user_{user_id}_{idx}")
+                        if delete_clicked:
+                            # 从列表中删除这个ID
+                            ids_list = current_ids_input.split(',')
+                            filtered_ids = []
+                            for id_str in ids_list:
+                                id_str_clean = id_str.strip()
+                                if id_str_clean and id_str_clean != user_id:
+                                    filtered_ids.append(id_str_clean)
+                            # 重新组合成字符串
+                            new_ids_input = ','.join(filtered_ids)
+                            st.session_state.user_id_input = new_ids_input
                             
+                            # 如果是删除自己，给出特殊提示
+                            is_self = str(user_id) == str(user['id'])
+                            if is_self:
+                                st.success(f"✅ 已移除您自己 (ID: {user_id})")
+                            else:
+                                st.success(f"✅ 已移除用户ID {user_id}")
+                            st.rerun()
+            else:
+                st.info("👆 请搜索用户并添加到列表，或直接输入用户ID")
+            
+            # 用户ID输入框
+            st.write("### 用户ID列表")
+            user_id_input = st.text_input(
+                "输入用户ID（用逗号分隔，如：1,2,3）",
+                value=current_ids_input,
+                key="user_id_input_widget",
+                help="可以直接在这里输入或修改用户ID，用逗号分隔"
+            )
+            
+            # 清空按钮
+            clear_clicked = st.button("🗑️ 清空列表", key="clear_list_button_sidebar")
+            if clear_clicked:
+                st.session_state.user_id_input = ""
+                st.success("✅ 已清空用户列表")
+                st.rerun()
+            
+            st.divider()
+            st.subheader("📝 创建群组")
+
+            # 使用表单包装创建群组功能
+            with st.form(key="create_group_final_form"):
+                group_name = st.text_input("群组名称", placeholder="输入新群组的名称")
+                
+                # 动态计算当前选择的用户
+                current_ids_input = st.session_state.get('user_id_input', '')
+                user_ids_list = [id.strip() for id in current_ids_input.split(',') if id.strip()]
+                
+                # 检查自己是否在列表中
+                self_in_list = str(user['id']) in user_ids_list
+                
+                # 显示当前选择的用户 - 动态更新
+                if user_ids_list:
+                    # 计算其他用户数量（不包括自己）
+                    other_users_count = 0
+                    for user_id in user_ids_list:
+                        if str(user_id) != str(user['id']):
+                            other_users_count += 1
+                    
+                    # 总用户数 = 其他用户数 + （如果自己在列表中则+1）
+                    total_users_count = other_users_count + (1 if self_in_list else 0)
+                    
+                    if self_in_list:
+                        st.info(f"当前已选择 {other_users_count} 位其他用户 + 您自己（自动添加）= 总共 {total_users_count} 位成员")
+                    else:
+                        st.info(f"当前已选择 {other_users_count} 位其他用户 + 您自己（自动添加）= 总共 {total_users_count + 1} 位成员")
+                else:
+                    # 如果列表为空
+                    st.info("当前已选择 0 位其他用户 + 您自己（自动添加）= 总共 1 位成员")
+                
+                # 验证提示 - 根据是否包含自己来调整验证逻辑
+                if self_in_list:
+                    # 如果列表中包含自己，需要至少1个其他用户
+                    if len([uid for uid in user_ids_list if str(uid) != str(user['id'])]) < 1:
+                        st.warning("⚠️ 请至少添加一个其他用户才能创建群组")
+                    else:
+                        st.success("✅ 已满足创建群组条件")
+                else:
+                    # 如果列表中没有自己，需要添加至少1个其他用户，且自己会被自动添加
+                    if len(user_ids_list) < 1:
+                        st.warning("⚠️ 请至少添加一个其他用户才能创建群组")
+                    else:
+                        st.success("✅ 已满足创建群组条件（您自己会自动加入）")
+                
+                # 提交按钮
+                create_clicked = st.form_submit_button("✅ 创建群组", use_container_width=True)
+                
+                if create_clicked:
+                    if not group_name.strip():
+                        st.error("请输入群组名称")
+                    else:
+                        # 收集用户ID
+                        user_ids = set()
+                        
+                        # 从会话状态中解析用户ID
+                        current_input = st.session_state.get('user_id_input', '')
+                        if current_input.strip():
+                            try:
+                                ids_list = [id.strip() for id in current_input.split(',') if id.strip()]
+                                for user_id_str in ids_list:
+                                    if user_id_str.isdigit():
+                                        user_ids.add(int(user_id_str))
+                                    else:
+                                        st.error(f"用户ID格式错误: {user_id_str} 不是有效数字")
+                                        break
+                            except Exception as e:
+                                st.error(f"解析用户ID时出错: {str(e)}")
+                                user_ids = set()
+                        
+                        # 确保当前用户在列表中（无论是否被删除，创建群组时都会自动添加自己）
+                        user_ids.add(user['id'])
+                        
+                        # 验证 - 实时显示验证结果
+                        other_users_count = len([uid for uid in user_ids if str(uid) != str(user['id'])])
+                        if other_users_count < 1:
+                            st.error("请至少添加一个其他用户")
+                        else:
+                            # 显示确认信息
                             with st.spinner("正在创建群组..."):
                                 try:
                                     # 创建群组
@@ -360,31 +819,40 @@ else:
                                     
                                     if response.status_code == 200:
                                         group_data = response.json()
-                                        st.success(f"✅ 群组创建成功！")
+                                        st.success("✅ 群组创建成功！")
                                         st.write(f"**群组名称:** {group_data['name']}")
                                         st.write(f"**群组ID:** {group_data['id']}")
+                                        st.write(f"**成功添加成员:** {group_data['added_members']} 位")
+                                        
+                                        if group_data['failed_members'] > 0:
+                                            st.warning(f"**添加失败:** {group_data['failed_members']} 位成员")
                                         
                                         # 清理状态
                                         if 'user_id_input' in st.session_state:
                                             del st.session_state.user_id_input
-                                        if 'search_triggered' in st.session_state:
-                                            del st.session_state.search_triggered
                                         
                                         # 刷新群组信息
                                         if 'user_groups' in st.session_state:
                                             del st.session_state.user_groups
                                         
-                                        # 关闭侧边栏
-                                        st.session_state.show_create_group = False
                                         st.rerun()
                                     else:
                                         error_detail = response.json().get('detail', '创建失败')
                                         st.error(f"❌ 创建群组失败: {error_detail}")
                                 except Exception as e:
                                     st.error(f"创建群组出错: {str(e)}")
+
+        # 添加创建群组按钮
+        col1, col2 = st.columns([1, 0.1])
+        with col1:
+            st.subheader("👥 群组详情")
+        with col2:
+            # 显示创建群组按钮
+            if st.button("➕", key="create_group_button", help="创建新群组"):
+                create_group_dialog()
         
         # 群组详情显示（原功能）
-        with st.container(border=True):
+        with st.container():
             # 从用户所在的群组中选择
             if st.session_state.user_groups:
                 group_options = [(g['group_name'], g['group_id']) for g in st.session_state.user_groups]
@@ -410,8 +878,6 @@ else:
                             with col2:
                                 st.info(f"**创建时间:** {group_detail.get('created_at', '未知')}")
                             
-                            # 显示成员列表
-                            st.subheader("👥 成员列表")
                             members = group_detail.get('members', [])
                             
                             if members:
@@ -429,19 +895,82 @@ else:
                                         current_user_is_leader = True
                                         break
                                 
-                                # 直接显示添加成员功能（临时测试版本）
+                                # 通过搜索用户名添加成员
                                 st.subheader("➕ 添加成员")
-                                with st.form(key="add_member_form"):
-                                    new_member_id = st.text_input("新成员ID", placeholder="输入要添加的用户ID")
-                                    add_member_clicked = st.form_submit_button("添加成员")
+                                with st.container(border=True):
+                                    st.markdown("**通过用户名快速搜索添加**")
+                                    if 'all_users_cache' not in st.session_state:
+                                        try:
+                                            response = requests.get(f"{API}/users")
+                                            if response.status_code == 200:
+                                                st.session_state.all_users_cache = response.json()
+                                            else:
+                                                st.session_state.all_users_cache = []
+                                        except Exception:
+                                            st.session_state.all_users_cache = []
+                                    options = {
+                                        f"{u['name']} (ID: {u['id']})": u
+                                        for u in st.session_state.get('all_users_cache', [])
+                                    }
+                                    selected_label = st.selectbox(
+                                        "输入用户名首字母自动推荐",
+                                        options=list(options.keys()),
+                                        index=None,
+                                        placeholder="输入首字母或前几个字母进行筛选",
+                                        key="add_member_search_selectbox"
+                                    )
                                     
-                                    if add_member_clicked:
-                                        if not new_member_id.strip():
+                                    if selected_label:
+                                        found_user = options[selected_label]
+                                        with st.container(border=True):
+                                            st.subheader("👤 用户信息")
+                                            st.markdown(f"**用户名:** {found_user['name']}")
+                                            st.markdown(f"**用户ID:** {found_user['id']}")
+                                            st.markdown(f"**公开信息:** {found_user.get('public_info', '无')}")
+                                            
+                                            add_clicked = st.button(
+                                                "➕ 添加到群组",
+                                                key=f"add_member_{found_user['id']}_btn"
+                                            )
+                                            if add_clicked:
+                                                try:
+                                                    response = requests.post(
+                                                        f"{API}/groups/{selected_group[1]}/add_member",
+                                                        json={
+                                                            "current_user_id": user['id'],
+                                                            "user_id": int(found_user['id'])
+                                                        }
+                                                    )
+                                                    if response.status_code == 200:
+                                                        st.success("✅ 成员添加成功")
+                                                        st.rerun()
+                                                    else:
+                                                        error_detail = response.json().get('detail', '添加失败')
+                                                        st.error(f"❌ 添加成员失败: {error_detail}")
+                                                except Exception as e:
+                                                    st.error(f"添加成员出错: {str(e)}")
+                                                    st.error(
+                                                        f"API调用详情: {e.response.text if hasattr(e, 'response') else '无详细信息'}"
+                                                    )
+
+                                # 备用入口：手动输入 ID
+                                with st.container(border=True):
+                                    st.markdown("**手动输入用户ID**")
+                                    manual_member_id = st.text_input(
+                                        "成员ID",
+                                        placeholder="输入要添加的用户ID",
+                                        key="add_member_manual_id"
+                                    )
+                                    add_member_manual_clicked = st.button(
+                                        "➕ 添加成员ID",
+                                        key="add_member_manual_btn"
+                                    )
+                                    if add_member_manual_clicked:
+                                        if not manual_member_id.strip():
                                             st.error("请输入成员ID")
                                         else:
                                             try:
-                                                new_member_id_int = int(new_member_id.strip())
-                                                # 调用添加成员API
+                                                new_member_id_int = int(manual_member_id.strip())
                                                 response = requests.post(
                                                     f"{API}/groups/{selected_group[1]}/add_member",
                                                     json={
@@ -459,7 +988,11 @@ else:
                                                 st.error("请输入有效的用户ID")
                                             except Exception as e:
                                                 st.error(f"添加成员出错: {str(e)}")
-                                                st.error(f"API调用详情: {e.response.text if hasattr(e, 'response') else '无详细信息'}")
+                                                st.error(
+                                                    f"API调用详情: {e.response.text if hasattr(e, 'response') else '无详细信息'}"
+                                                )
+
+                                st.subheader("👥 成员列表")
                                 member_data = []
                                 for member in members:
                                     # 获取成员的用户信息和余额
@@ -608,7 +1141,7 @@ else:
     # ------------------------
     with tab3:
         st.subheader("🎫 使用兑换码")
-        with st.container(border=True):  # 添加边框效果
+        with st.container():  # 添加边框效果
             # 兑换码输入框
             code = st.text_input("请输入兑换码", max_chars=10, placeholder="例如: ABC1234567")
             
@@ -644,7 +1177,7 @@ else:
     # ------------------------
     with tab4:
         st.subheader("📝 交易记录")
-        with st.container(border=True):  # 添加边框效果
+        with st.container():  # 添加边框效果
             try:
                 # 获取交易记录
                 response = requests.get(f"{API}/transactions")
@@ -719,7 +1252,7 @@ else:
     # ------------------------
     with tab5:
         st.subheader("🎲 随机用户")
-        with st.container(border=True):  # 添加边框效果
+        with st.container():  # 添加边框效果
             # 获取随机用户信息
             if st.button("🎲 获取随机用户"):
                 try:
